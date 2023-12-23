@@ -1,0 +1,6 @@
+experiment2/build/*
+.zip
+.out
+.o
+.so
+.rar
