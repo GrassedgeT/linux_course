@@ -5,6 +5,7 @@
 #include <string.h>
 #include <limits.h>
 #include <fcntl.h>
+#include <linux/limits.h>
 
 void copy_file(const char *src, const char *dst) {
     int src_fd = open(src, O_RDONLY);
