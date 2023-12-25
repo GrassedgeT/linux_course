@@ -11,8 +11,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/target/${fileBasenameNoExtension}",
             "args": [
-                "-R",
-                "/home/cao/Codes/C_Project/linux_course"
+                //myls-R参数
+                // "-R",
+                // "/home/cao/Codes/C_Project/linux_course"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
