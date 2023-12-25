@@ -6,7 +6,6 @@
 #include <string.h>
 #include <limits.h>
 #include <linux/limits.h>
-#include <glusterfs/compat.h>
 
 void print_file_info(const char *file_name) {
     struct stat file_stat;
