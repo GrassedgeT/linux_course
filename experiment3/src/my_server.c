@@ -79,7 +79,7 @@ void handle_client_request(int client_fd) {
         if (end_path) {
             *end_path = '\0'; // 终止路径字符串
 
-            // 处理根路径映射
+            // 处理根路径
             if (strcmp(file_path, "/") == 0) {
                 snprintf(file_path, BUFFER_SIZE, "%s/index.html", DIST_PATH);
             } else {
@@ -164,7 +164,9 @@ int main() {
     socklen_t client_addr_len;
     struct sockaddr_in client_addr;
 
+    //启动服务器
     start_server(&server_fd, &server_addr);
+    //设置非阻塞
     set_non_blocking(server_fd);
 
     epoll_fd = epoll_create1(0);
@@ -195,7 +197,7 @@ int main() {
                 set_non_blocking(client_fd);
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.fd = client_fd;
-                if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
+                if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == -1) { 
                     perror("epoll_ctl: client_fd");
                     close(client_fd);
                     continue;
