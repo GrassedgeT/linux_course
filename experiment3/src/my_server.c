@@ -9,7 +9,7 @@
 
 #define MAX_EVENTS 10
 #define PORT 8080
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE UINT16_MAX
 #define DIST_PATH "/home/cao/Codes/C_Project/linux_course/experiment3/dist"
 void start_server(int *server_fd, struct sockaddr_in *server_addr) {
     *server_fd = socket(AF_INET, SOCK_STREAM, 0);
