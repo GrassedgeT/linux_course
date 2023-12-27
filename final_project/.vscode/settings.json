@@ -38,6 +38,7 @@
   "files.autoSaveDelay": 5000,
   "files.associations": {
     "iostream": "cpp",
-    "ostream": "cpp"
+    "ostream": "cpp",
+    "ncurses.h": "c"
   }
 }
