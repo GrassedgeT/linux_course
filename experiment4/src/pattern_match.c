@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
                 char line[1000];
                 while (fgets(line, sizeof(line), file)) {
                     if (strstr(line, keyword) != NULL) {
+                        //找到目标文件后，通过管道将文件名传给父进程
                         char message[MAX_FILENAME + 50];
                         sprintf(message, "子进程'%d'找到了文件：%s", pid, files[j]);
                         write(pipefd[1], message, strlen(message) + 1);
