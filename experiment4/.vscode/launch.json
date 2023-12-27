@@ -5,12 +5,14 @@
     "version": "0.2.0",
     "configurations": [
 
+
         {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/target/${fileBasenameNoExtension}",
             "args": [
+                "string"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -27,7 +29,22 @@
                     "description": "Set Disassembly Flavor to Intel",
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
-                }
+                },
+                // {
+                //     "description": "Set breakpoint at fork()",
+                //     "text": "break fork",
+                //     "ignoreFailures": true
+                // }
+                {
+                    "description": "只调试子进程",
+                    "text": "set follow-fork-mode child",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "只调试子进程",
+                    "text": "set detach-on-fork on",
+                    "ignoreFailures": true
+                },
             ],
             "preLaunchTask": "C/C++: gcc-12 build active file",
             "miDebuggerPath": "/usr/bin/gdb"
