@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <queue.h>
+#include <arpa/inet.h>
 
 #define MAX_EVENTS 10
 #define PORT 8080
@@ -34,6 +35,19 @@ void *thread_func(void *arg) {
 }
 
 void start_server(int *server_fd, struct sockaddr_in *server_addr) {
+    // 创建任务队列
+    task_queue = createQueue();
+    printf("任务队列初始化完成\n");
+
+    // 创建线程池
+    int thread_pool_size = 10; // 线程池的大小
+    thread_pool = (pthread_t *)malloc(thread_pool_size * sizeof(pthread_t));
+    for (int i = 0; i < thread_pool_size; i++) {
+        pthread_create(&thread_pool[i], NULL, thread_func, NULL);
+    }
+    printf("线程池初始化完成\n");
+    
+
     *server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (*server_fd == -1) {
         perror("socket failed");
@@ -149,16 +163,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // 创建线程池
-    int thread_pool_size = 10; // 线程池的大小
-    thread_pool = (pthread_t *)malloc(thread_pool_size * sizeof(pthread_t));
-    for (int i = 0; i < thread_pool_size; i++) {
-        pthread_create(&thread_pool[i], NULL, thread_func, NULL);
-    }
-    printf("线程池初始化完成\n");
-    // 创建任务队列
-    task_queue = createQueue();
-    printf("任务队列初始化完成\n");
+    
 
     while (1) {
         nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
@@ -172,7 +177,7 @@ int main() {
                     perror("accept");
                     continue;
                 }
-
+                printf("新连接建立: %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
                 set_non_blocking(client_fd);
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.fd = client_fd;
