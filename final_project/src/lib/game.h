@@ -7,14 +7,8 @@
 #define MAX_ATK_RANGE 10
 #define MAX_LEVEL 20
 #define MAX_PLAYER_NUM 20
-typedef struct Room
-{
-    char* name;
-    int player_num;
-    player* players;
-};
 
-typedef struct player{
+typedef struct Player{
     int id;
     char* name;
     int Hp; //生命值
@@ -27,41 +21,50 @@ typedef struct player{
     int x; //横坐标
     int y; //纵坐标
     int status; //状态0:死亡 1：正常 2：无敌
-};
+}Player;
+
+typedef struct Room
+{
+    char* name;
+    int player_num;
+    struct Player* players;
+}Room;
+
+
 
 //小怪
-typedef struct monster{
+typedef struct Monster{
     char* name;
     int Hp; //生命值
     int Atk; //攻击力
     int x; //横坐标
     int y; //纵坐标
     int status; //状态0:死亡 1：正常
-};
+}Monster;
 
-typedef struct msg{
+typedef struct Msg{
     char* content;
     char* sender;
-    msg* next;
-};
+    struct Msg* next;
+}Msg;
 
-typedef struct msg_queue{
+typedef struct Msg_queue{
     int size;
-    msg* front;
-    msg* rear;
-};
+    Msg* front;
+    Msg* rear;
+}Msg_queue;
 
 
 //初始化消息队列
-msg_queue* init_msg_queue(){
-    msg_queue* queue = (msg_queue*)malloc(sizeof(msg_queue));
+Msg_queue* init_msg_queue(){
+    Msg_queue* queue = (Msg_queue*)malloc(sizeof(Msg_queue));
     queue->front = NULL;
     queue->rear = NULL;
     return queue;
 }
 
 //消息入队
-void push_msg(msg_queue* queue, msg* message){
+void push_msg(Msg_queue* queue, Msg* message){
     if(queue->front == NULL){
         queue->front = message;
         queue->rear = message;
@@ -73,11 +76,11 @@ void push_msg(msg_queue* queue, msg* message){
 }
 
 //消息出队
-msg* pop_msg(msg_queue* queue){
+Msg* pop_msg(Msg_queue* queue){
     if(queue->front == NULL){
         return NULL;
     }
-    msg* message = queue->front;
+    Msg* message = queue->front;
     queue->front = queue->front->next;
     queue->size--;
     return message;
