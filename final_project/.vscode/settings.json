@@ -39,6 +39,7 @@
   "files.associations": {
     "iostream": "cpp",
     "ostream": "cpp",
-    "ncurses.h": "c"
+    "ncurses.h": "c",
+    "cstdlib": "cpp"
   }
 }
