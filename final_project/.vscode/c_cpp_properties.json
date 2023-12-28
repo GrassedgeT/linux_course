@@ -6,7 +6,9 @@
                 "${workspaceFolder}",
                 "/usr/include",
                 "/usr/local/include",
-                "${workspaceFolder}/src/lib"
+                "${workspaceFolder}/src/lib",
+                "${workspaceFolder}/src/lib/client",
+                "${workspaceFolder}/src/lib/server"
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "${default}",
