@@ -40,6 +40,8 @@
     "iostream": "cpp",
     "ostream": "cpp",
     "ncurses.h": "c",
-    "cstdlib": "cpp"
+    "cstdlib": "cpp",
+    "queue.h": "c",
+    "pthread.h": "c"
   }
 }
