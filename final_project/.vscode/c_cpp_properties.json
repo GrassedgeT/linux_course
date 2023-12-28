@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}",
                 "/usr/include",
-                "/usr/local/include"
+                "/usr/local/include",
+                "${workspaceFolder}/src/lib"
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "${default}",
