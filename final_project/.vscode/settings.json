@@ -42,6 +42,7 @@
     "ncurses.h": "c",
     "cstdlib": "cpp",
     "queue.h": "c",
-    "pthread.h": "c"
+    "pthread.h": "c",
+    "cstdint": "cpp"
   }
 }
