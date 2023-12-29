@@ -14,8 +14,6 @@
                 "ncurses",
                 "-I",
                 "${workspaceFolder}/src/lib/",
-                "-I",
-                "${workspaceFolder}/src/lib/client",
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -42,8 +40,6 @@
                 "${workspaceFolder}/build/target/${fileBasenameNoExtension}",
                 "-I",
                 "${workspaceFolder}/src/lib/",
-                "-I",
-                "${workspaceFolder}/src/lib/server",
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

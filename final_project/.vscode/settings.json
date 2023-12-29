@@ -43,6 +43,9 @@
     "cstdlib": "cpp",
     "queue.h": "c",
     "pthread.h": "c",
-    "cstdint": "cpp"
+    "cstdint": "cpp",
+    "protocol.h": "c",
+    "title.h": "c",
+    "connection.h": "c"
   }
 }
