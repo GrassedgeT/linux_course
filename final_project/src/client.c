@@ -4,6 +4,7 @@
 #include <roomlist.h>
 #include <connection.h>
 #include <signal.h>
+#include <pthread.h>
 int serverfd;
 
 
@@ -29,7 +30,12 @@ int main(int argc,char* argv[]){
         return 0;
     }
 
+    //启动新线程处理服务器响应
+    pthread_t tid;
+    pthread_create(&tid, NULL, handle_response, &serverfd);
+
     getch();
+    send_request(serverfd, get_roomlist());
     WINDOW* roomlist_win = init_roomlist_win(); // 初始化房间列表窗口
     
     endwin();

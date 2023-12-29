@@ -9,16 +9,19 @@
 #include <pthread.h>
 #include <queue.h>
 #include <arpa/inet.h>
+#include <protocol.h>
 
 #define MAX_EVENTS 10
 #define PORT 8080
-#define BUFFER_SIZE UINT16_MAX
+#define BUFFER_SIZE 1024
 #define DIST_PATH "/home/cao/Codes/C_Project/linux_course/experiment3/dist"
 
 Queue* task_queue; // 任务队列
 pthread_t *thread_pool; // 线程池
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; // 用于保护任务队列的互斥锁
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER; // 用于通知有新的任务的条件变量
+RoomNode* room_list; // 房间列表
+int room_num = 0; // 房间数量
 
 void *thread_func(void *arg) {
     while (1) {
@@ -47,6 +50,8 @@ void start_server(int *server_fd, struct sockaddr_in *server_addr) {
     }
     printf("线程池初始化完成\n");
     
+    // 创建房间列表
+    room_list = NULL;
 
     *server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (*server_fd == -1) {
@@ -85,10 +90,11 @@ void set_non_blocking(int sockfd) {
 }
 
 void handle_client_request(int client_fd) {
-    char buffer[BUFFER_SIZE];
+    uint8_t buffer[BUFFER_SIZE];
     ssize_t bytes_read;
 
     bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
+
     if (bytes_read <= 0) {
         close(client_fd);
         return;
@@ -96,9 +102,14 @@ void handle_client_request(int client_fd) {
 
     buffer[bytes_read] = '\0';
 
-    // 创建 buffer 的副本
-    char buffer_copy[BUFFER_SIZE];
-    
+    temp_result result = get_opt(buffer);
+    switch (result.opt)
+    {
+        case GET_ROOM_LIST:
+            char* buf = update_roomlist(get_roominfo(room_list), room_num);
+            send(client_fd, buf, strlen(buf), 0);
+            break;
+    }
 
     close(client_fd);
 }
