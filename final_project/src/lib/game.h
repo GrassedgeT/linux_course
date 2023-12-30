@@ -8,7 +8,17 @@
 #define MAX_ATK_RANGE 10
 #define MAX_LEVEL 20
 #define MAX_PLAYER_NUM 10
+#define MAX_MONSTER_NUM 20
 
+//小怪
+typedef struct Monster{
+    char* name;
+    uint8_t Hp; //生命值
+    uint8_t Atk; //攻击力
+    int x; //横坐标
+    int y; //纵坐标
+    u_int8_t status; //状态0:死亡 1：正常
+}Monster;
 typedef struct Player{
     uint16_t id;
     char* name;
@@ -42,6 +52,19 @@ typedef struct RoomInfo{
     struct RoomInfo* next;
 }RoomInfo;
 
+//初始化房间列表
+RoomNode* init_roomlist(){
+    //返回一个空的头节点
+    RoomNode* head = (RoomNode*)malloc(sizeof(RoomNode));
+    head->id = 0;
+    head->name = NULL;
+    head->player_num = 0;
+    head->players = NULL;
+    head->monsters = NULL;
+    head->next = NULL;
+    return head;
+}
+
 RoomInfo* get_roominfo(RoomNode* roomlist){
     RoomInfo* roominfo = NULL;
     RoomNode* p = roomlist;
@@ -69,7 +92,7 @@ void add_room(RoomNode* head, char* name){
     new_room->name = name;
     new_room->player_num = 0;
     new_room->players = (Player*)malloc(sizeof(Player)*MAX_PLAYER_NUM);
-    new_room->monsters = NULL;
+    new_room->monsters = (Monster*)malloc(sizeof(Monster)*MAX_MONSTER_NUM);
     new_room->next = NULL;
     p->next = new_room;
 }
@@ -141,15 +164,7 @@ Player* search_player(RoomNode* room, uint16_t id){
 }
 
 
-//小怪
-typedef struct Monster{
-    char* name;
-    uint8_t Hp; //生命值
-    uint8_t Atk; //攻击力
-    int x; //横坐标
-    int y; //纵坐标
-    u_int8_t status; //状态0:死亡 1：正常
-}Monster;
+
 
 typedef struct Msg{
     char* content;
