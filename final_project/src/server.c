@@ -93,12 +93,12 @@ void set_non_blocking(int sockfd) {
     }
 }
 
-int send_boardcast(uint8_t* buffer){
+int send_boardcast(Data data){
     int client_fd;
     Node* p = all_client_fd->front;
     while(p != NULL){
         client_fd = p->data;
-        write(client_fd, buffer, strlen(buffer));
+        write(client_fd, data.data, data.len);
         p = p->next;
     }
 }
@@ -120,15 +120,37 @@ void handle_client_request(int client_fd) {
     switch (result.opt)
     {
         case GET_ROOM_LIST:
-            char *buf = update_roomlist(get_roominfo(room_list), room_num);
-            int len = strlen(buf);
-            write(client_fd, buf, strlen(buf));            
+            Data data = update_roomlist(get_roominfo(room_list, room_num, MAX_PLAYER_NUM), room_num);
+            write(client_fd, data.data, data.len);
+            free(data.data);            
             break;
         case CREATE_ROOM:
             char *room_name = (char*)malloc(sizeof(char)*11);
             memcpy(room_name, result.data, sizeof(char)*11);
             add_room(room_list, room_name);
             room_num++;
+            send_boardcast(update_roomlist(get_roominfo(room_list, room_num, MAX_PLAYER_NUM), room_num));
+            free(room_name);
+            break;
+        case JOIN_ROOM:
+            uint16_t room_id;
+            memcpy(&room_id, result.data, sizeof(uint16_t));
+            char *player_name = (char*)malloc(sizeof(char)*11);
+            memcpy(player_name, result.data+sizeof(uint16_t), sizeof(char)*11);
+            int flag = add_player(search_room(room_list, room_id), player_name);
+            if(flag){
+                //加入成功
+                Data data = send_join_success();
+                write(client_fd, data.data, data.len);
+                send_boardcast(update_roomlist(get_roominfo(room_list, room_num, MAX_PLAYER_NUM), room_num));
+                //TODO 广播更新房间数据
+            }else{
+                //加入失败
+                Data data = send_join_fail();
+                write(client_fd, data.data, data.len);
+            }
+
+            free(player_name);
             break;
     }
 

@@ -97,13 +97,13 @@ int connect_to_server(){
 }
 
 
-int send_request(uint8_t* buffer){
+int send_request(Data data){
     // 发送请求
-    int len = strlen((char*)buffer);
-    if (send(sockfd, buffer, len, 0) < 0) {
+    if (send(sockfd, data.data, data.len, 0) < 0) {
         perror("Send failed");
         exit(EXIT_FAILURE);
     }
+    free(data.data);    
     return 0;
 }
 
@@ -113,7 +113,7 @@ void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){
     uint8_t room_num;
     memcpy(&room_num, temp, sizeof(uint8_t));
     temp+=sizeof(uint8_t);
-   if(room_num == NULL_DATA){
+    if(room_num == NULL_DATA){
         //房间列表为空
         wclear(roomlist_win);
         box(roomlist_win, 0, 0);
@@ -131,11 +131,28 @@ void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){
     }
     RoomInfo* roomlist = (RoomInfo*)malloc(sizeof(RoomInfo)*room_num);
     memcpy(roomlist, temp, sizeof(RoomInfo)*room_num);
+    const char* title = "房间列表";
+    const char* message1 = "点击\" c \"键创建房间，点击esc退出";
+    const char* message2 = "点击\" Enter \"键并输入房间名称后的四位id加入房间";
+    int height, width;
+    getmaxyx(roomlist_win, height, width);  // 获取窗口的大小
     wclear(roomlist_win);
     box(roomlist_win, 0, 0);
+    mvwprintw(roomlist_win, height / 4, (width - strlen(title)) / 2 + 2, "%s", title);
+    mvwprintw(roomlist_win, height / 4 + room_num + 4, (width - strlen(message1)) / 2 + 4, "%s", message1);
+    mvwprintw(roomlist_win, height / 4 + room_num + 6, (width - strlen(message2)) / 2 + 8, "%s", message2);
     for(int i=0;i<room_num;i++){
-        mvwprintw(roomlist_win, i+1, 1, "%s %d/%d", roomlist[i].name, roomlist[i].player_num, roomlist[i].max_player_num);
+        char* roominfo = (char*)malloc(sizeof(char)*30);
+        char* roomname = (char*)malloc(sizeof(char)*11);
+        sprintf(roomname, "%s_%d", roomlist[i].name, roomlist[i].id);
+        sprintf(roominfo, "%-14s  %d/%d", roomname, roomlist[i].player_num, roomlist[i].max_player_num);
+        mvwprintw(roomlist_win, height / 4 + i + 2, (width - strlen(roominfo)) / 2, "%s", roominfo);
+        free(roominfo);
+        free(roomname);
     }
+    free(roomlist);
+    wrefresh(roomlist_win);
+    
 }
 
 void handle_response(){

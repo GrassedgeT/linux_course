@@ -12,16 +12,17 @@
 
 //小怪
 typedef struct Monster{
-    char* name;
+    uint16_t id;    
     uint8_t Hp; //生命值
     uint8_t Atk; //攻击力
     int x; //横坐标
     int y; //纵坐标
     u_int8_t status; //状态0:死亡 1：正常
+    struct Monster* next;
 }Monster;
 typedef struct Player{
     uint16_t id;
-    char* name;
+    char name[11];
     uint8_t Hp; //生命值 初始值100
     uint8_t Atk; //攻击力 初始值10
     uint8_t Atk_range; //攻击范围 初始值2
@@ -32,12 +33,13 @@ typedef struct Player{
     int x; //横坐标
     int y; //纵坐标
     uint8_t status; //状态0: 死亡 1：正常 2：无敌
+    struct Player* next;
 }Player;
 
 typedef struct RoomNode
 {
     uint16_t id;
-    char* name;
+    char name[11];
     uint8_t player_num;
     struct Player* players;
     struct Monster* monsters;
@@ -46,18 +48,48 @@ typedef struct RoomNode
 
 typedef struct RoomInfo{
     uint16_t id;
-    char* name;
+    char name[11];
     uint8_t player_num;
     uint8_t max_player_num;
     struct RoomInfo* next;
 }RoomInfo;
+
+Monster* init_monsterlist(){
+    Monster* head = (Monster*)malloc(sizeof(Monster));
+    head->id = 0;
+    head->Hp = 0;
+    head->Atk = 0;
+    head->x = 0;
+    head->y = 0;
+    head->status = 0;
+    head->next = NULL;
+    return head;
+}
+
+Player* init_playerlist(){
+    Player* head = (Player*)malloc(sizeof(Player));
+    head->id = 0;
+    strcpy(head->name, "");
+    head->Hp = 0;
+    head->Atk = 0;
+    head->Atk_range = 0;
+    head->level = 0;
+    head->score = 0;
+    head->exp = 0;
+    head->next_level_exp = 0;
+    head->x = 0;
+    head->y = 0;
+    head->status = 0;
+    head->next = NULL;
+    return head;
+}
 
 //初始化房间列表
 RoomNode* init_roomlist(){
     //返回一个空的头节点
     RoomNode* head = (RoomNode*)malloc(sizeof(RoomNode));
     head->id = 0;
-    head->name = NULL;
+    strcpy(head->name, "");
     head->player_num = 0;
     head->players = NULL;
     head->monsters = NULL;
@@ -65,17 +97,24 @@ RoomNode* init_roomlist(){
     return head;
 }
 
-RoomInfo* get_roominfo(RoomNode* roomlist){
-    RoomInfo* roominfo = NULL;
+RoomInfo* get_roominfo(RoomNode* roomlist, int room_num, int max_player_num){
+    if(room_num == 0){
+        return NULL;
+    }
+    int i = 0;
+    RoomInfo* roominfo = malloc(room_num * sizeof(RoomInfo));  // 动态分配内存
+    if (roominfo == NULL)
+    {
+        return NULL;
+    }
+    
     RoomNode* p = roomlist;
-    RoomInfo* temp = roominfo;
     while(p->next != NULL){
-        temp = (RoomInfo*)malloc(sizeof(RoomInfo));
-        temp->id = p->next->id;
-        temp->name = p->next->name;
-        temp->player_num = p->next->player_num;
-        temp->max_player_num = MAX_PLAYER_NUM;
-        temp->next = NULL;
+        roominfo[i].id = p->next->id;
+        strcpy(roominfo[i].name, p->next->name);
+        roominfo[i].player_num = p->next->player_num;
+        roominfo[i].max_player_num = max_player_num;
+        i++;
         p = p->next;
     }
     return roominfo;
@@ -89,10 +128,10 @@ void add_room(RoomNode* head, char* name){
     }
     RoomNode* new_room = (RoomNode*)malloc(sizeof(RoomNode));
     new_room->id = (uint16_t)random_int(1000, 9999);
-    new_room->name = name;
+    strcpy(new_room->name, name);
     new_room->player_num = 0;
-    new_room->players = (Player*)malloc(sizeof(Player)*MAX_PLAYER_NUM);
-    new_room->monsters = (Monster*)malloc(sizeof(Monster)*MAX_MONSTER_NUM);
+    new_room->players = init_playerlist();
+    new_room->monsters = init_monsterlist();
     new_room->next = NULL;
     p->next = new_room;
 }
@@ -121,12 +160,18 @@ RoomNode* search_room(RoomNode* head, uint16_t id){
     return NULL;
 }
 
-void add_player(RoomNode* room, char* name){
-    Player* p = room->players;
-    while(p->name != NULL){
-        p++;
+
+
+int add_player(RoomNode* room, char* name){
+    if(room->player_num == MAX_PLAYER_NUM){
+        return 0;
     }
-    p->name = name;
+    Player* p = (Player*)malloc(sizeof(Player));
+    Player* head = room->players;
+    while(head->next != NULL){
+        head = head->next;
+    }
+    strcpy(p->name, name);
     p->Hp = 100;
     p->Atk = 10;
     p->Atk_range = 2;
@@ -138,27 +183,30 @@ void add_player(RoomNode* room, char* name){
     p->y = 0;
     p->status = 0;
     room->player_num++;
+    head->next = p;
+    return 1;
 }
 
 void del_player(RoomNode* room, uint16_t id){
     Player* p = room->players;
-    while(p->name != NULL){
-        if(p->id == id){
-            p->name = NULL;
-            room->player_num--;
+    while(p->next != NULL){
+        if(p->next->id == id){
+            Player* q = p->next;
+            p->next = p->next->next;
+            free(q);
             return;
         }
-        p++;
-    }    
+        p = p->next;
+    }
 }
 
 Player* search_player(RoomNode* room, uint16_t id){
     Player* p = room->players;
-    while(p->name != NULL){
-        if(p->id == id){
-            return p;
+    while(p->next != NULL){
+        if(p->next->id == id){
+            return p->next;
         }
-        p++;
+        p = p->next;
     }
     return NULL;
 }
@@ -166,9 +214,10 @@ Player* search_player(RoomNode* room, uint16_t id){
 
 
 
+
 typedef struct Msg{
-    char* content;
-    char* sender;
+    char content[100];
+    char sender[11];
     struct Msg* next;
 }Msg;
 

@@ -34,47 +34,54 @@
 #define UPDATE_DATA 1 //更新房间信息: 0000 0001
 #define UPDATE_MSG 2 //更新消息: 0000 0010
 #define UPDATE_ROOM_LIST 3 //更新房间列表: 0000 0011
+#define JOIN_ROOM_SUCCESS 4 //服务器响应: 0000 0100
+#define JOIN_ROOM_FAIL 5 //服务器响应: 0000 0101
 
 #define SERVER_RSP_MASK 0x0f //服务器响应掩码: 0000 1111
 
-uint8_t* get_roomlist(){
+typedef struct{
+    int len; //数据长度
+    uint8_t* data; //数据
+}Data;
+
+Data get_roomlist(){
     uint8_t opt = GET_ROOM_LIST;
     uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t));
     uint8_t* temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp+=sizeof(uint8_t);
-    memcpy(temp, "\0", sizeof(char));
-    temp+=sizeof(char);
-    return buf;
+    Data data = {sizeof(uint8_t), buf};
+    return data;
 }
 
-uint8_t* create_room(char* room_name){
+Data create_room(char* room_name){
     uint8_t opt = CREATE_ROOM;
-    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)*3+strlen(room_name));
+    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)*2+strlen(room_name));
     uint8_t* temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp+=sizeof(uint8_t);;
     memcpy(temp, room_name, strlen(room_name)*sizeof(char));
     temp+=strlen(room_name)*sizeof(char);
-    return buf;
+    Data data = {sizeof(uint8_t)*2+strlen(room_name), buf};
+    return data;
 }
 
-uint8_t* join_room(uint16_t room_id, char* player_name){
+Data join_room(uint16_t room_id, char* player_name){
     uint8_t opt = JOIN_ROOM;
-    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)*3+strlen(player_name));
+    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)*2+strlen(player_name));
     uint8_t* temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp+=sizeof(uint8_t);
     memcpy(temp, &room_id, sizeof(uint16_t));
     temp+=sizeof(uint16_t);
-    memcpy(temp, player_name, strlen(player_name)*sizeof(char));
-    temp+=strlen(player_name)*sizeof(char);
-    return buf;
+    Data data = {sizeof(uint8_t)*2+strlen(player_name), buf};
+    return data;
 }
 
-uint8_t* update_roomlist(RoomInfo* roomlist, uint8_t room_num){
+Data update_roomlist(RoomInfo* roominfo, uint8_t room_num){
     uint8_t opt = UPDATE_ROOM_LIST;
     uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)*2+sizeof(RoomInfo)*room_num);
+    int len = sizeof(uint8_t)*2+sizeof(RoomInfo)*room_num;
     uint8_t* temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp+=sizeof(uint8_t);
@@ -86,16 +93,34 @@ uint8_t* update_roomlist(RoomInfo* roomlist, uint8_t room_num){
         memcpy(temp, &null_data, sizeof(uint8_t));
         temp+=sizeof(uint8_t);
     }
-    
     if(room_num != 0){
-        memcpy(temp, roomlist, sizeof(RoomInfo)*room_num);
+        memcpy(temp, roominfo, sizeof(RoomInfo)*room_num);
         temp+=sizeof(RoomInfo)*room_num;       
     }
-    
-    memcpy(temp, "\0", sizeof(char));
-    temp+=sizeof(char);
-    return buf;
+    Data data = {len, buf};
+    return data;
 }
+
+Data send_join_fail(){
+    uint8_t opt = JOIN_ROOM_FAIL;
+    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t));
+    uint8_t* temp = buf;
+    memcpy(temp, &opt, sizeof(uint8_t));
+    temp+=sizeof(uint8_t);
+    Data data = {sizeof(uint8_t), buf};
+    return data;
+}
+
+Data send_join_success(){
+    uint8_t opt = JOIN_ROOM_SUCCESS;
+    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t));
+    uint8_t* temp = buf;
+    memcpy(temp, &opt, sizeof(uint8_t));
+    temp+=sizeof(uint8_t);
+    Data data = {sizeof(uint8_t), buf};
+    return data;
+}
+
 
 typedef struct temp_result
 {
