@@ -5,6 +5,7 @@
 #include <string.h>
 #include <game.h>
 
+#define NULL_DATA UINT8_MAX //空数据
 
 //客户端操作类型定义
 #define CREATE_ROOM 1 //创建房间: 0000 0001
@@ -30,9 +31,9 @@
 #define CARRY_PLAYER 128 //携带目标玩家 1000 0000
 
 //服务器响应类型定义
-#define UPDATE_DATA 1 //房间信息: 0000 0001
-#define UPDATE_MSG 2 //消息: 0000 0010
-#define UPDATE_ROOM_LIST 3 //房间列表: 0000 0011
+#define UPDATE_DATA 1 //更新房间信息: 0000 0001
+#define UPDATE_MSG 2 //更新消息: 0000 0010
+#define UPDATE_ROOM_LIST 3 //更新房间列表: 0000 0011
 
 #define SERVER_RSP_MASK 0x0f //服务器响应掩码: 0000 1111
 
@@ -77,10 +78,20 @@ uint8_t* update_roomlist(RoomInfo* roomlist, uint8_t room_num){
     uint8_t* temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp+=sizeof(uint8_t);
-    memcpy(temp, &room_num, sizeof(uint8_t));
-    temp+=sizeof(uint8_t);
-    memcpy(temp, roomlist, sizeof(RoomInfo)*room_num);
-    temp+=sizeof(RoomInfo)*room_num;
+    if(room_num != 0){
+        memcpy(temp, &room_num, sizeof(uint8_t));
+        temp+=sizeof(uint8_t);    
+    }else{
+        uint8_t null_data = NULL_DATA;
+        memcpy(temp, &null_data, sizeof(uint8_t));
+        temp+=sizeof(uint8_t);
+    }
+    
+    if(room_num != 0){
+        memcpy(temp, roomlist, sizeof(RoomInfo)*room_num);
+        temp+=sizeof(RoomInfo)*room_num;       
+    }
+    
     memcpy(temp, "\0", sizeof(char));
     temp+=sizeof(char);
     return buf;
@@ -96,7 +107,6 @@ typedef struct temp_result
 temp_result get_opt(uint8_t* buf){
     struct temp_result result;
     memcpy(&result.opt, buf, sizeof(uint8_t));
-    result.opt = ntohl(result.opt);
     result.data = buf+sizeof(uint8_t);
     return result;
 }

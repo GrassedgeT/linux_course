@@ -46,10 +46,10 @@ void handle_winch(int sig){
 void show_server_status(int server_fd){
     if(server_fd == -1){
         char* error = "连接服务器失败：按下任意键退出";
-        mvwprintw(stdscr, LINES - 10, (COLS - strlen(error)) / 2 + 5, "%s", error);
+        mvwprintw(stdscr, LINES - 10, (COLS - strlen(error)) / 2 + 9, "%s", error);
     }
     else{
         char* success = "连接服务器成功: 按下任意键开始游戏";
-        mvwprintw(stdscr, LINES - 10, (COLS - strlen(success)) / 2 + 5, "%s", success);
+        mvwprintw(stdscr, LINES - 10, (COLS - strlen(success)) / 2 + 9, "%s", success);
     }
 };

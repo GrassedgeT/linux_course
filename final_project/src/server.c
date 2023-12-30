@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 #include <protocol.h>
 
-#define MAX_EVENTS 10
+#define MAX_EVENTS UINT16_MAX
 #define PORT 8080
 #define BUFFER_SIZE 1024
 #define DIST_PATH "/home/cao/Codes/C_Project/linux_course/experiment3/dist"
@@ -22,6 +22,9 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; // 用于保护任务队列�
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER; // 用于通知有新的任务的条件变量
 RoomNode* room_list; // 房间列表
 int room_num = 0; // 房间数量
+struct epoll_event events[MAX_EVENTS];
+Queue* all_client_fd; // 所有客户端的fd
+int client_num = 0; 
 
 void *thread_func(void *arg) {
     while (1) {
@@ -40,6 +43,7 @@ void *thread_func(void *arg) {
 void start_server(int *server_fd, struct sockaddr_in *server_addr) {
     // 创建任务队列
     task_queue = createQueue();
+    all_client_fd = createQueue();
     printf("任务队列初始化完成\n");
 
     // 创建线程池
@@ -51,7 +55,7 @@ void start_server(int *server_fd, struct sockaddr_in *server_addr) {
     printf("线程池初始化完成\n");
     
     // 创建房间列表
-    room_list = NULL;
+    room_list = init_roomlist();
 
     *server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (*server_fd == -1) {
@@ -89,6 +93,16 @@ void set_non_blocking(int sockfd) {
     }
 }
 
+int send_boardcast(uint8_t* buffer){
+    int client_fd;
+    Node* p = all_client_fd->front;
+    while(p != NULL){
+        client_fd = p->data;
+        write(client_fd, buffer, strlen(buffer));
+        p = p->next;
+    }
+}
+
 void handle_client_request(int client_fd) {
     uint8_t buffer[BUFFER_SIZE];
     ssize_t bytes_read;
@@ -106,12 +120,19 @@ void handle_client_request(int client_fd) {
     switch (result.opt)
     {
         case GET_ROOM_LIST:
-            char* buf = update_roomlist(get_roominfo(room_list), room_num);
-            send(client_fd, buf, strlen(buf), 0);
+            char *buf = update_roomlist(get_roominfo(room_list), room_num);
+            int len = strlen(buf);
+            write(client_fd, buf, strlen(buf));            
+            break;
+        case CREATE_ROOM:
+            char *room_name = (char*)malloc(sizeof(char)*11);
+            memcpy(room_name, result.data, sizeof(char)*11);
+            add_room(room_list, room_name);
+            room_num++;
             break;
     }
 
-    close(client_fd);
+    // close(client_fd);
 }
 
 void send_response(int client_fd, const char *header, const char *content_type, const char *body) {
@@ -121,29 +142,6 @@ void send_response(int client_fd, const char *header, const char *content_type, 
 }
 
 void send_custom_error(int client_fd, const char *error_page, const char *response_header) {
-    char file_path[BUFFER_SIZE];
-    snprintf(file_path, BUFFER_SIZE, "%s/%s", DIST_PATH, error_page);
-
-    FILE *file = fopen(file_path, "rb");
-    if (file) {
-        // 获取文件大小
-        fseek(file, 0, SEEK_END);
-        long fsize = ftell(file);
-        fseek(file, 0, SEEK_SET);
-
-        // 读取文件内容
-        char *file_content = (char* )malloc(fsize + 1);
-        fread(file_content, fsize, 1, file);
-        fclose(file);
-        file_content[fsize] = 0;
-
-        // 发送响应
-        send_response(client_fd, response_header, "text/html", file_content);
-        free(file_content);
-    } else {
-        // 如果自定义错误页面不存在，则发送简单的错误消息
-        send_response(client_fd, response_header, "text/plain", response_header);
-    }
 }
 
 
@@ -151,7 +149,7 @@ void send_custom_error(int client_fd, const char *error_page, const char *respon
 int main() {
     int server_fd;
     struct sockaddr_in server_addr;
-    struct epoll_event ev, events[MAX_EVENTS];
+    struct epoll_event ev;
     int epoll_fd, nfds, n, client_fd;
     socklen_t client_addr_len;
     struct sockaddr_in client_addr;
@@ -197,6 +195,9 @@ int main() {
                     close(client_fd);
                     continue;
                 }
+                push(all_client_fd, client_fd);
+                client_num++;
+                 
             } else {
                 // 处理客户端请求
                 pthread_mutex_lock(&mutex);
