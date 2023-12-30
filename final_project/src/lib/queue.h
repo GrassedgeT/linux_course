@@ -29,6 +29,40 @@ void push(Queue* q, int value) {
     q->rear = temp;
 }
 
+Node* search_node(Queue* q, int value) {
+    Node* p = q->front;
+    while (p != NULL) {
+        if (p->data == value)
+            return p;
+        p = p->next;
+    }
+    return NULL;
+}
+
+int del_node(Queue* q, int value) {
+    Node* p = q->front;
+    Node* prev = NULL;
+    while (p != NULL) {
+        if (p->data == value) {
+            if (prev == NULL) {
+                q->front = p->next;
+                if (q->front == NULL)
+                    q->rear = NULL;
+            }
+            else {
+                prev->next = p->next;
+                if (prev->next == NULL)
+                    q->rear = prev;
+            }
+            free(p);
+            return 1;
+        }
+        prev = p;
+        p = p->next;
+    }
+    return 0;
+}
+
 int pop(Queue* q) {
     if (q->front == NULL)
         return -1;
