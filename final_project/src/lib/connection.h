@@ -163,6 +163,8 @@ void* handle_update_roomdata(uint8_t* buffer){
         }else if(ch == ' '){
             //复活
             send_request(reborn(local_room_id, local_player_name));
+            wclear(popwin);
+            wrefresh(popwin);
             delwin(popwin);
         }
         
@@ -233,7 +235,7 @@ void* handle_update_roomdata(uint8_t* buffer){
     }
     //显示
     for(int i=0;i<roomdata->player_num;i++){
-        mvwprintw(score_win, i+2, 1, "%d-%s: %d",i, players[i].name, players[i].exp);
+        mvwprintw(score_win, i+2, 1, "%d-%s: %d",i+1, players[i].name, players[i].exp);
     }
     free(players);
 

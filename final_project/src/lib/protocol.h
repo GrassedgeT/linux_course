@@ -318,7 +318,7 @@ Data update_roomlist(RoomInfo *roominfo, uint8_t room_num)
 
 
 
-int move_player(uint8_t *data, int direction, uint8_t* room_list)
+int move_player(uint8_t *data, int direction, RoomNode* room_list)
 {
     uint16_t room_id;
     char *player_name = (char *)malloc(sizeof(char) * 11);
@@ -428,7 +428,7 @@ Data attack(int direction, uint16_t room_id, char *player_name)
 Data quit(uint16_t room_id, char *player_name)
 {
     uint8_t opt = QUIT;
-    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t));
+    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t)+sizeof(uint16_t)+11*sizeof(char));
     uint8_t *temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp += sizeof(uint8_t);
@@ -438,14 +438,14 @@ Data quit(uint16_t room_id, char *player_name)
     strcpy(name, player_name);
     memcpy(temp, name, sizeof(char) * 11);
     temp += 11 * sizeof(char);
-    Data data = {sizeof(uint8_t), buf};
+    Data data = {sizeof(uint8_t) + sizeof(uint16_t)+11*sizeof(char), buf};
     return data;
 }
 
 Data reborn(uint16_t room_id, char *player_name)
 {
     uint8_t opt = REBORN;
-    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t));
+    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t) + sizeof(uint16_t) + 11 * sizeof(char));
     uint8_t *temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp += sizeof(uint8_t);
@@ -455,7 +455,7 @@ Data reborn(uint16_t room_id, char *player_name)
     strcpy(name, player_name);
     memcpy(temp, name, sizeof(char) * 11);
     temp += 11 * sizeof(char);
-    Data data = {sizeof(uint8_t), buf};
+    Data data = {sizeof(uint8_t) + sizeof(uint16_t) + 11*sizeof(char), buf};
     return data;
 }
 
@@ -478,7 +478,7 @@ RoomInfo *get_room_list(uint8_t *data)
     return roomlist;
 }
 
-int quit_room(uint8_t *data, uint8_t* room_list)
+int quit_room(uint8_t *data, RoomNode* room_list)
 {
     uint16_t room_id;
     char *player_name = (char *)malloc(sizeof(char) * 11);
@@ -503,7 +503,7 @@ int quit_room(uint8_t *data, uint8_t* room_list)
     return 1;
 }
 
-int reborn_player(uint8_t *data, uint8_t* room_list)
+int reborn_player(uint8_t *data, RoomNode* room_list)
 {
     uint16_t room_id;
     char *player_name = (char *)malloc(sizeof(char) * 11);
@@ -517,6 +517,7 @@ int reborn_player(uint8_t *data, uint8_t* room_list)
         if (strcmp(p->next->name, player_name) == 0)
         {
             p->next->status = 1;
+            p->next->Hp = 100;
             p->next->x = random_int(0, MAP_WIDTH);
             p->next->y = random_int(0, MAP_HEIGHT);
             p->next->Hp = p->next->level * 10;
