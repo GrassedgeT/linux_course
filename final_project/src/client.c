@@ -68,7 +68,7 @@ int main(int argc,char* argv[]){
             break;
         }else if (input == '\n'){
             //加入房间
-            // 创建一个新的子窗口，位置在房间列表窗口的旁边
+            // 创建一个新的窗口，位置在房间列表窗口的旁边
             WINDOW* input_win = newwin(5, 30, 0, COLS - 30);
             box(input_win, 0, 0);  // 绘制边框
             mvwprintw(input_win, 2, 1, "请输入4位房间ID:");  // 打印提示信息
@@ -109,7 +109,9 @@ int main(int argc,char* argv[]){
 
             if (!flag) {
                 uint16_t id = atoi(room_id);
-                send_request(join_room(room_id, player_name));
+                local_room_id = id;
+                strcpy(local_player_name, player_name); 
+                send_request(join_room(id, player_name));
             }
 
         }

@@ -9,7 +9,8 @@
 #define MAX_LEVEL 20
 #define MAX_PLAYER_NUM 10
 #define MAX_MONSTER_NUM 20
-
+#define MAP_HEIGHT 100
+#define MAP_WIDTH 100
 //小怪
 typedef struct Monster{
     uint16_t id;    
@@ -163,6 +164,9 @@ RoomNode* search_room(RoomNode* head, uint16_t id){
 
 
 int add_player(RoomNode* room, char* name){
+    if(room == NULL){
+        return 0;
+    }
     if(room->player_num == MAX_PLAYER_NUM){
         return 0;
     }

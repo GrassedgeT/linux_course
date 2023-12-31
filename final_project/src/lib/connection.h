@@ -22,6 +22,9 @@ WINDOW* score_win;
 WINDOW* playerinfo_win;
 WINDOW* map_win;
 int sockfd;
+char local_player_name[11];
+uint16_t local_room_id;
+int gameing = 0;//是否游戏中标识
 
 void listen_response() {
     int epollfd, nfds;
@@ -105,6 +108,15 @@ int send_request(Data data){
     }
     free(data.data);    
     return 0;
+}
+
+void handle_join_success(){
+    //加入房间成功
+    map_win = newwin(MAP_HEIGHT, MAP_WIDTH, 0, 0);
+    int map_win_height, map_win_width;
+    getmaxyx(map_win, map_win_height, map_win_width);  // 获取窗口的大小
+    score_win = newwin(14, 10, 0, MAP_WIDTH-10);
+    playerinfo_win = newwin(14, 15, 0, 0);
 }
 
 void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){

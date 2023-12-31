@@ -68,13 +68,17 @@ Data create_room(char* room_name){
 
 Data join_room(uint16_t room_id, char* player_name){
     uint8_t opt = JOIN_ROOM;
-    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)*2+strlen(player_name));
+    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)+sizeof(uint16_t)+11*sizeof(char));
     uint8_t* temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp+=sizeof(uint8_t);
     memcpy(temp, &room_id, sizeof(uint16_t));
     temp+=sizeof(uint16_t);
-    Data data = {sizeof(uint8_t)*2+strlen(player_name), buf};
+    char* name = (char*)malloc(sizeof(char)*11);
+    strcpy(name, player_name);
+    memcpy(temp, name, sizeof(char)*11);
+    temp+=strlen(player_name)*sizeof(char);
+    Data data = {sizeof(uint8_t)+sizeof(uint16_t)+11*sizeof(char), buf};
     return data;
 }
 
