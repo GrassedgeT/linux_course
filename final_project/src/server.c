@@ -108,7 +108,7 @@ void handle_client_request(int client_fd) {
     buffer[bytes_read] = '\0';
 
     temp_result result = get_opt(buffer);
-    switch (result.opt)
+    switch (result.opt & CLIENT_OPT_MASK)
     {
         case GET_ROOM_LIST:
             Data data = update_roomlist(get_roominfo(room_list, room_num, MAX_PLAYER_NUM), room_num);
@@ -145,6 +145,28 @@ void handle_client_request(int client_fd) {
             }
 
             free(player_name);
+            break;
+        case MOVE_UP:
+            move_player(result.data, MOVE_UP, room_list);
+            break;
+        case MOVE_DOWN:
+            move_player(result.data, MOVE_DOWN, room_list);
+            break;
+        case MOVE_LEFT:
+            move_player(result.data, MOVE_LEFT, room_list);
+            break;
+        case MOVE_RIGHT:
+            move_player(result.data, MOVE_RIGHT, room_list);
+            break;
+        case ATTACK:
+            send_boardcast(send_attack(result, room_list));
+            player_attack(result.data, result.opt & (!CLIENT_OPT_MASK),room_list);
+            break;
+        case QUIT:
+            quit_room(result.data, room_list);
+            break;
+        case REBORN:
+            reborn_player(result.data, room_list);
             break;
     }
 

@@ -111,13 +111,14 @@ int send_request(Data data){
 }
 
 void handle_join_success(){
-    gameing = 1;
+    
     //加入房间成功
     map_win = newpad(MAP_HEIGHT, MAP_WIDTH);
     int map_win_height, map_win_width;
     getmaxyx(stdscr, map_win_height, map_win_width);  // 获取窗口的大小
     score_win = newwin(14, 20, 0, map_win_width-20);
-    playerinfo_win = newwin(12, 30, 0, 0);
+    playerinfo_win = newwin(12, 20, 0, 0);
+    gameing = 1;
 }
 
 void* handle_update_roomdata(uint8_t* buffer){
@@ -131,9 +132,7 @@ void* handle_update_roomdata(uint8_t* buffer){
         return NULL;
     }
 
-    //更新地图
-    int map_win_height, map_win_width;
-    getmaxyx(stdscr, map_win_height, map_win_width);  // 获取窗口的大小
+    
     wclear(map_win);
     box(map_win, 0, 0);
     Player* myself;
@@ -142,9 +141,37 @@ void* handle_update_roomdata(uint8_t* buffer){
             myself = &roomdata->players[i];
         }
     }
+    if(myself->status == 0){
+        //玩家死亡
+        wclear(map_win);
+        box(map_win, 0, 0);
+        wclear(score_win);
+        box(score_win, 0, 0);
+        wclear(playerinfo_win);
+        box(playerinfo_win, 0, 0);
+        //居中弹出
+        WINDOW* popwin = newwin(5, 30, (LINES-5)/2, (COLS-30)/2);
+        mvwprintw(popwin, 1, 1, "你已死亡，点击空格复活，点击esc退出");
+        wrefresh(popwin);
+        char ch = wgetch(map_win);
+        if (ch == 27)
+        {
+            //退出
+            send_request(quit(local_room_id, local_player_name));
+            delwin(popwin);
+            exit(0);
+        }else if(ch == ' '){
+            //复活
+            send_request(reborn(local_room_id, local_player_name));
+            delwin(popwin);
+        }
+        
+ 
+        return NULL;
+    }
  
     //刷新所有小怪的位置
-    for(int i=0;i<20;i++){
+    for(int i=0;i<MAX_MONSTER_NUM;i++){
         if(roomdata->monsters[i].status == 1){
             //显示小怪，小怪为红色的随机字符，头顶有当前生命值
             wattron(map_win, COLOR_PAIR(1));
@@ -165,9 +192,9 @@ void* handle_update_roomdata(uint8_t* buffer){
         if(roomdata->players[i].status == 1){
             //显示玩家，玩家为绿色的#字符，头顶有当前名称+生命值，玩家形状为以自身坐标为中心的十字形，十字的边长为攻击范围
             wattron(map_win, COLOR_PAIR(2));
-            mvwprintw(map_win, roomdata->players[i].y + 1, roomdata->players[i].x, "%c","#");
+            mvwprintw(map_win, roomdata->players[i].y + 1, roomdata->players[i].x, "%s","#");
             mvwprintw(map_win, roomdata->players[i].y, roomdata->players[i].x-1, "%s","###");
-            mvwprintw(map_win, roomdata->players[i].y - 1, roomdata->players[i].x, "%c","#");
+            mvwprintw(map_win, roomdata->players[i].y - 1, roomdata->players[i].x, "%s","#");
             char* Hp = (char*)malloc(sizeof(char)*15);
             sprintf(Hp, "%s: HP:%u", roomdata->players[i].name,roomdata->players[i].Hp);
             wattroff(map_win, COLOR_PAIR(2));
@@ -186,6 +213,7 @@ void* handle_update_roomdata(uint8_t* buffer){
     mvwprintw(playerinfo_win, 4, 1, "攻击力：%u", myself->Atk);
     mvwprintw(playerinfo_win, 5, 1, "攻击范围：%u", myself->Atk_range);
     mvwprintw(playerinfo_win, 6, 1, "经验值：%u/%u", myself->exp, myself->next_level_exp);
+    mvwprintw(playerinfo_win, 7, 1, "位置：(%u,%u)", myself->x, myself->y);
     
     //更新分数，分数用经验值代替，从高到低排序
     wclear(score_win);
@@ -212,18 +240,13 @@ void* handle_update_roomdata(uint8_t* buffer){
     
     //刷新
     //以当前玩家为中心显示地图
+    //更新地图
+    int map_win_height, map_win_width;
+    getmaxyx(stdscr, map_win_height, map_win_width);  // 获取窗口的大小
     int start_x = myself->x - map_win_width/2;
-    if (start_x < 0)
-    {
-        start_x = 0;
-    }
     int start_y = myself->y - map_win_height/2;
-    if (start_y < 0)
-    {
-        start_y = 0;
-    }
     
-    pnoutrefresh(map_win, 0, 0, 0, 0, map_win_height-1, map_win_width-1);
+    pnoutrefresh(map_win, start_y, start_x, 0, 0, map_win_height-1, map_win_width-1);
     wnoutrefresh(score_win);
     wnoutrefresh(playerinfo_win);
 
@@ -283,13 +306,52 @@ void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){
     
 }
 
+show_attack(uint8_t buffer){
+    int x, y;
+    uint8_t direction, attack_range;
+    memcpy(&x, buffer+sizeof(uint8_t), sizeof(int));
+    memcpy(&y, buffer+sizeof(uint8_t)+sizeof(int), sizeof(int));
+    memcpy(&direction, buffer+sizeof(uint8_t)+sizeof(int)+sizeof(int), sizeof(uint8_t));
+    memcpy(&attack_range, buffer+sizeof(uint8_t)+sizeof(int)+sizeof(int)+sizeof(uint8_t), sizeof(uint8_t));
+    wattron(map_win, COLOR_PAIR(1));char ch[attack_range];
+    for(int i=0;i<attack_range;i++){
+        ch[i] = '·';
+    }
+    switch (direction)
+    {
+        case FIREST:
+            for(int i = 0;i<attack_range;i++)
+                mvwprintw(map_win, y+i+1, x+1, "%s", ch);
+        case SECOND:
+            for(int i = 0;i<attack_range;i++)
+                mvwprintw(map_win, y+i-1, x-attack_range, "%s", ch);       
+        case THIRD:
+            for(int i = 0;i<attack_range;i++)
+                mvwprintw(map_win, y-i-1, x-attack_range, "%s", ch);
+        case FOURTH:
+            for(int i = 0;i<attack_range;i++)
+                mvwprintw(map_win, y-i+1, x+1, "%s", ch);
+    }
+    wattroff(map_win, COLOR_PAIR(1));
+    int map_win_height, map_win_width;
+    getmaxyx(stdscr, map_win_height, map_win_width);  // 获取窗口的大小
+    int start_x = x - map_win_width/2;
+    int start_y = y - map_win_height/2;
+    
+    pnoutrefresh(map_win, start_y, start_x, 0, 0, map_win_height-1, map_win_width-1);
+    wnoutrefresh(score_win);
+    wnoutrefresh(playerinfo_win);
+
+    doupdate();
+}
+
 void handle_response(){
     // 处理响应
     char buffer[UINT16_MAX];
     int len = read(sockfd, buffer, sizeof(buffer) - 1);
     if (len > 0) {
         uint8_t opt = (uint8_t)buffer[0];
-        switch (opt)
+        switch (opt & SERVER_RSP_MASK)
         {
             case UPDATE_ROOM_LIST:
             handle_update_roomlist(buffer, roomlist_win);
@@ -302,6 +364,9 @@ void handle_response(){
             break;
             case JOIN_ROOM_SUCCESS:
             handle_join_success();
+            break;
+            case ATTACK:
+            show_attack(buffer);
             break;
         }
     } else if (len == 0) {

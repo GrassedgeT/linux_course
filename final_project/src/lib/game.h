@@ -10,9 +10,9 @@
 #define MAX_ATK_RANGE 10
 #define MAX_LEVEL 20
 #define MAX_PLAYER_NUM 10
-#define MAX_MONSTER_NUM 20
-#define MAP_HEIGHT 1000
-#define MAP_WIDTH 1000
+#define MAX_MONSTER_NUM 10
+#define MAP_HEIGHT 100
+#define MAP_WIDTH 250
 //小怪
 typedef struct Monster{
     uint16_t id;    
@@ -179,7 +179,7 @@ RoomNode* add_room(RoomNode* head, char* name){
     strcpy(new_room->name, name);
     new_room->player_num = 0;
     new_room->players = init_playerlist();
-    for(int i=0;i<20;i++){
+    for(int i=0;i<MAX_MONSTER_NUM;i++){
         new_room->monsters[i].id = random_int(1000, 9999);
         new_room->monsters[i].Hp = random_int(50, MAX_HP);
         new_room->monsters[i].Atk = random_int(10, MAX_ATK);
@@ -257,9 +257,7 @@ void del_player(RoomNode* room, uint16_t id){
     pthread_mutex_lock(&room->player_mutex);
     while(p->next != NULL){
         if(p->next->id == id){
-            Player* q = p->next;
-            p->next = p->next->next;
-            free(q);
+            
             pthread_mutex_unlock(&room->player_mutex);
             return;
         }

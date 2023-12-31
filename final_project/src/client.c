@@ -30,8 +30,7 @@ int main(int argc,char* argv[]){
     getch();
     roomlist_win = newwin(0, 0, 0, 0); // 初始化房间列表窗口
     send_request(get_roomlist());
-    while(1){
-
+    while(!gameing){
         char input = wgetch(roomlist_win);
         if (input == 'c')
         {
@@ -117,6 +116,45 @@ int main(int argc,char* argv[]){
             }   
         }
     }
+    while (gameing)
+    {
+        char ch = wgetch(map_win);
+        //wasd控制移动，hjkl分别负责攻击一二三四四个象限
+        switch (ch)
+        {
+            case 'w':
+                send_request(send_move(MOVE_UP, local_room_id, local_player_name));
+                break;
+            case 'a':
+                send_request(send_move(MOVE_LEFT, local_room_id, local_player_name));
+                break;
+            case 's':
+                send_request(send_move(MOVE_DOWN, local_room_id, local_player_name));
+                break;
+            case 'd':
+                send_request(send_move(MOVE_RIGHT, local_room_id, local_player_name));
+                break;
+            case 'h':
+                send_request(attack(FIREST, local_room_id, local_player_name));
+                break;
+            case 'j':
+                send_request(attack(SECOND, local_room_id, local_player_name));
+                break;
+            case 'k':
+                send_request(attack(THIRD, local_room_id, local_player_name));
+                break;
+            case 'l':
+                send_request(attack(FOURTH, local_room_id, local_player_name));
+                break;
+            case 27:
+                //退出
+                send_request(quit(local_room_id, local_player_name));
+                gameing = false;
+                break;
+            
+        }
+    }
+    
     
     endwin();
     return 0;
