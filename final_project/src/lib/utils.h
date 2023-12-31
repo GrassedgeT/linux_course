@@ -19,6 +19,10 @@ char* add_random_suffix(const char* str, int random_number) {
 
 //生成指定范围随即整数的函数
 int random_int(int min, int max) {
-    srand(time(NULL)); // 初始化随机数生成器
     return rand() % (max - min + 1) + min; // 生成一个指定范围的随机数
+}
+
+//生成随机字符的函数
+char random_char() {
+    return rand() % 26 + 'a'; // 生成一个随机字符
 }

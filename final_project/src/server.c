@@ -6,8 +6,7 @@
 #include <netinet/in.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
-#include <pthread.h>
-#include <queue.h>
+
 #include <arpa/inet.h>
 #include <protocol.h>
 
@@ -119,7 +118,9 @@ void handle_client_request(int client_fd) {
         case CREATE_ROOM:
             char *room_name = (char*)malloc(sizeof(char)*11);
             memcpy(room_name, result.data, sizeof(char)*11);
-            add_room(room_list, room_name);
+            RoomNode* newroom = add_room(room_list, room_name);
+            pthread_t tid;
+            pthread_create(&tid, NULL, control_monsters, (void*)newroom);
             room_num++;
             send_boardcast(update_roomlist(get_roominfo(room_list, room_num, MAX_PLAYER_NUM), room_num));
             free(room_name);
@@ -162,6 +163,7 @@ void send_custom_error(int client_fd, const char *error_page, const char *respon
 
 
 int main() {
+    srand(time(NULL)); // 初始化随机数生成器
     int server_fd;
     struct sockaddr_in server_addr;
     struct epoll_event ev;

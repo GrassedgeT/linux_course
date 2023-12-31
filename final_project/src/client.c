@@ -6,6 +6,7 @@
 #include <ctype.h>
 
 int main(int argc,char* argv[]){
+    srand(time(NULL)); // 初始化随机数生成器
     setlocale(LC_ALL, ""); // 设置locale以支持中文
     initscr();
     start_color();//支持彩色
@@ -30,6 +31,7 @@ int main(int argc,char* argv[]){
     roomlist_win = newwin(0, 0, 0, 0); // 初始化房间列表窗口
     send_request(get_roomlist());
     while(1){
+
         char input = wgetch(roomlist_win);
         if (input == 'c')
         {
@@ -112,7 +114,7 @@ int main(int argc,char* argv[]){
                 local_room_id = id;
                 strcpy(local_player_name, player_name); 
                 send_request(join_room(id, player_name));
-            }
+            }   
         }
     }
     

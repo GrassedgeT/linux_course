@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <utils.h>
+#include <pthread.h>
+
 #define MAX_HP 150
 #define MAX_ATK 50
 #define MAX_ATK_RANGE 10
@@ -30,7 +32,7 @@ typedef struct Player{
     uint8_t level; //等级 初始值1
     uint8_t score; //分数 初始值0
     uint8_t exp; //经验值 初始值0
-    uint8_t next_level_exp; //升级所需经验值 初始值50 逐级递增50
+    uint8_t next_level_exp; //升级所需经验值 初始值10 逐级递增10击杀小怪得1击杀玩家得2
     int x; //横坐标
     int y; //纵坐标
     uint8_t status; //状态0: 死亡 1：正常 2：无敌
@@ -42,8 +44,11 @@ typedef struct RoomNode
     uint16_t id;
     char name[11];
     uint8_t player_num;
-    Player players[MAX_PLAYER_NUM];
+    Player* players;
     Monster monsters[MAX_MONSTER_NUM];
+    pthread_mutex_t player_mutex;
+    pthread_mutex_t monster_mutex;
+    struct RoomNode* next;
 }RoomNode;
 
 typedef struct RoomData{
@@ -51,8 +56,8 @@ typedef struct RoomData{
     char name[11];
     uint8_t player_num;
     uint8_t max_player_num;
-    struct Player* players;
-    struct Monster* monsters;
+    Player players[MAX_PLAYER_NUM];
+    Monster monsters[MAX_MONSTER_NUM];
 }RoomData;
 
 typedef struct RoomInfo{
@@ -91,11 +96,39 @@ RoomNode* init_roomlist(){
     strcpy(head->name, "");
     head->player_num = 0;
     head->players = NULL;
-    head->monsters = NULL;
     head->next = NULL;
-    player_mutex = PTHREAD_MUTEX_INITIALIZER;
-    monster_mutex = PTHREAD_MUTEX_INITIALIZER;
     return head;
+}
+
+RoomData* get_roomdata(RoomNode* roomNode){
+    RoomData* roomdata = (RoomData*)malloc(sizeof(RoomData));
+    pthread_mutex_lock(&roomNode->player_mutex);
+    pthread_mutex_lock(&roomNode->monster_mutex);
+    roomdata->id = roomNode->id;
+    strcpy(roomdata->name, roomNode->name);
+    roomdata->player_num = roomNode->player_num;
+    memcpy(roomdata->monsters, roomNode->monsters, sizeof(Monster)*MAX_MONSTER_NUM);
+    int i = 0;
+    Player* p = roomNode->players;
+    while(p->next != NULL){
+        roomdata->players[i].id = p->next->id;
+        strcpy(roomdata->players[i].name, p->next->name);
+        roomdata->players[i].Hp = p->next->Hp;
+        roomdata->players[i].Atk = p->next->Atk;
+        roomdata->players[i].Atk_range = p->next->Atk_range;
+        roomdata->players[i].level = p->next->level;
+        roomdata->players[i].score = p->next->score;
+        roomdata->players[i].exp = p->next->exp;
+        roomdata->players[i].next_level_exp = p->next->next_level_exp;
+        roomdata->players[i].x = p->next->x;
+        roomdata->players[i].y = p->next->y;
+        roomdata->players[i].status = p->next->status;
+        p = p->next;
+        i++;
+    }
+    pthread_mutex_unlock(&roomNode->player_mutex);
+    pthread_mutex_unlock(&roomNode->monster_mutex);
+    return roomdata;
 }
 
 RoomInfo* get_roominfo(RoomNode* roomlist, int room_num, int max_player_num){
@@ -110,18 +143,19 @@ RoomInfo* get_roominfo(RoomNode* roomlist, int room_num, int max_player_num){
     }
     
     RoomNode* p = roomlist;
-    pthread_mutex_lock(&p->player_mutex);
-    pthread_mutex_lock(&p->monster_mutex);
+    
     while(p->next != NULL){
+        pthread_mutex_lock(&p->next->player_mutex);
+        pthread_mutex_lock(&p->next->monster_mutex);
         roominfo[i].id = p->next->id;
         strcpy(roominfo[i].name, p->next->name);
         roominfo[i].player_num = p->next->player_num;
         roominfo[i].max_player_num = max_player_num;
         i++;
+        pthread_mutex_unlock(&p->next->player_mutex);
+        pthread_mutex_unlock(&p->next->monster_mutex);
         p = p->next;
     }
-    pthread_mutex_unlock(&p->player_mutex);
-    pthread_mutex_unlock(&p->monster_mutex);
     return roominfo;
 }
 
@@ -134,85 +168,8 @@ void* reborn_monster(Monster* monster){
     monster->status = 1;
 }
 
-void* control_monsters(RoomNode* roomNode){
-    while(1){
-        sleep(1);
-        pthread_mutex_lock(&roomNode->player_mutex);
-        if(roomNode->player_num == 0){
-            pthread_mutex_unlock(&roomNode->player_mutex);
-            continue;
-        }
-        Player* p = roomNode->players;
-        pthread_mutex_lock(&roomNode->monster_mutex);
-        for(int i=0;i<20;i++){
-            if(roomNode->monsters[i].status == 0){
-                reborn_monster(&roomNode->monsters[i]);
-                continue;
-            }
-            double min_distance = INFINITY;
-            Player* nearest_player = NULL;
-            Player* p = roomNode->players;
-            while(p->next != NULL){
-                if(p->next->status == 0){
-                    p = p->next;
-                    continue;
-                }
-                double distance = sqrt(pow(p->next->x - roomNode->monsters[i].x, 2) + pow(p->next->y - roomNode->monsters[i].y, 2));
-                if(distance < min_distance){
-                    min_distance = distance;
-                    nearest_player = p->next;
-                }
-                p = p->next;
-            }
-            if(nearest_player != NULL){
-                // 让怪物向最近的玩家移动。
-                if(nearest_player->x > roomNode->monsters[i].x){
-                    roomNode->monsters[i].x++;
-                }else if(nearest_player->x < roomNode->monsters[i].x){
-                    roomNode->monsters[i].x--;
-                }
-                if(nearest_player->y > roomNode->monsters[i].y){
-                    roomNode->monsters[i].y++;
-                }else if(nearest_player->y < roomNode->monsters[i].y){
-                    roomNode->monsters[i].y--;
-                }
-                // 如果怪物与玩家的坐标重合，怪物攻击玩家且怪物死亡
-                if(nearest_player->x == roomNode->monsters[i].x && nearest_player->y == roomNode->monsters[i].y){
-                    if(nearest_player->Hp > roomNode->monsters[i].Atk){
-                        nearest_player->Hp -= roomNode->monsters[i].Atk;
-                    }else{
-                        nearest_player->Hp = 0;
-                        nearest_player->status = 0;
-                    }
-                    roomNode->monsters[i].status = 0;
-                }   
-            }
-        }
-        send_boardcast(update_roomdata(get_roomdata(roomNode)));
-        pthread_mutex_unlock(&roomNode->monster_mutex);
-        pthread_mutex_unlock(&roomNode->player_mutex);
-    }
-    
-}
-
-RoomData* get_roomdata(RoomNode* roomNode){
-    RoomData* roomdata = (RoomData*)malloc(sizeof(RoomData));
-    roomdata->id = roomNode->id;
-    strcpy(roomdata->name, roomNode->name);
-    roomdata->player_num = roomNode->player_num;
-    roomdata->monsters = memcpy(roomdata->monsters, roomNode->monsters, sizeof(Monster)*MAX_MONSTER_NUM);
-    int i = 0;
-    Player* p = roomNode->players;
-    while(p->next != NULL){
-        roomdata->players[i] = *p->next;
-        p = p->next;
-        i++;
-    }
-    return roomdata;
-}
-
 //添加新房间
-void add_room(RoomNode* head, char* name){
+RoomNode* add_room(RoomNode* head, char* name){
     RoomNode* p = head;
     while(p->next != NULL){
         p = p->next;
@@ -222,7 +179,6 @@ void add_room(RoomNode* head, char* name){
     strcpy(new_room->name, name);
     new_room->player_num = 0;
     new_room->players = init_playerlist();
-    new_room->monsters = (Monster*)malloc(sizeof(Monster)*20);
     for(int i=0;i<20;i++){
         new_room->monsters[i].id = random_int(1000, 9999);
         new_room->monsters[i].Hp = random_int(50, MAX_HP);
@@ -231,10 +187,12 @@ void add_room(RoomNode* head, char* name){
         new_room->monsters[i].y = random_int(0, MAP_HEIGHT);
         new_room->monsters[i].status = 1;
     }
-    pthread_t tid;
-    pthread_create(&tid, NULL, control_monsters, (void*)new_room);
+    pthread_mutex_init(&new_room->player_mutex, NULL);
+    pthread_mutex_init(&new_room->monster_mutex, NULL);
+    
     new_room->next = NULL;
     p->next = new_room;
+    return new_room;
 }
 
 void del_room(RoomNode* head, uint16_t id){

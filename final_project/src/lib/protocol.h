@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <game.h>
-
+#include <math.h>
+#include <queue.h>
 #define NULL_DATA UINT8_MAX //空数据
 
 //客户端操作类型定义
@@ -170,4 +171,75 @@ RoomInfo* get_room_list(uint8_t* data){
     RoomInfo* roomlist = (RoomInfo*)malloc(sizeof(RoomInfo)*room_num);
     memcpy(roomlist, data+sizeof(uint8_t), sizeof(RoomInfo)*room_num);
     return roomlist;
+}
+
+void* control_monsters(RoomNode* roomNode){
+    while(1){
+        sleep(1);
+        int alive_player_num = 0;
+        pthread_mutex_lock(&roomNode->player_mutex);
+        Player* temp = roomNode->players;
+        while(temp->next != NULL){
+            if(temp->next->status == 1){
+                alive_player_num++;
+            }
+            temp = temp->next;
+        }   
+        if(alive_player_num == 0){
+            pthread_mutex_unlock(&roomNode->player_mutex);
+            continue;
+        }
+
+        Player* p = roomNode->players;
+        pthread_mutex_lock(&roomNode->monster_mutex);
+        for(int i=0;i<20;i++){
+            if(roomNode->monsters[i].status == 0){
+                //复活怪物
+                reborn_monster(&roomNode->monsters[i]);
+                continue;
+            }
+            int min_distance = INT32_MAX;
+            Player* nearest_player = NULL;
+            Player* p = roomNode->players;
+            while(p->next != NULL){
+                if(p->next->status == 0){
+                    p = p->next;
+                    continue;
+                }
+                //距离不按照直线距离计算，而是按照水平距离+垂直距离计算
+                int distance = abs(roomNode->monsters[i].x - p->next->x) + abs(roomNode->monsters[i].y - p->next->y);
+                if(distance < min_distance){
+                    min_distance = distance;
+                    nearest_player = p->next;
+                }
+                p = p->next;
+            }
+            if(nearest_player != NULL){
+                // 让怪物向最近的玩家移动。
+                if(nearest_player->x > roomNode->monsters[i].x){
+                    roomNode->monsters[i].x++;
+                }else if(nearest_player->x < roomNode->monsters[i].x){
+                    roomNode->monsters[i].x--;
+                }
+                if(nearest_player->y > roomNode->monsters[i].y){
+                    roomNode->monsters[i].y++;
+                }else if(nearest_player->y < roomNode->monsters[i].y){
+                    roomNode->monsters[i].y--;
+                }
+                // 如果怪物与玩家的坐标重合，怪物攻击玩家且怪物死亡
+                if(nearest_player->x == roomNode->monsters[i].x && nearest_player->y == roomNode->monsters[i].y){
+                    if(nearest_player->Hp > roomNode->monsters[i].Atk){
+                        nearest_player->Hp -= roomNode->monsters[i].Atk;
+                    }else{
+                        nearest_player->Hp = 0;
+                        nearest_player->status = 0;
+                    }
+                    roomNode->monsters[i].status = 0;
+                }   
+            }
+        }
+        pthread_mutex_unlock(&roomNode->monster_mutex);
+        pthread_mutex_unlock(&roomNode->player_mutex);
+        send_boardcast(update_roomdata(get_roomdata(roomNode)));
+    }
 }

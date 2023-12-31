@@ -113,18 +113,124 @@ int send_request(Data data){
 void handle_join_success(){
     gameing = 1;
     //加入房间成功
-    map_win = newwin(0, 0, 0, 0);
+    map_win = newpad(MAP_HEIGHT, MAP_WIDTH);
     int map_win_height, map_win_width;
-    getmaxyx(map_win, map_win_height, map_win_width);  // 获取窗口的大小
+    getmaxyx(stdscr, map_win_height, map_win_width);  // 获取窗口的大小
     score_win = newwin(14, 20, 0, map_win_width-20);
     playerinfo_win = newwin(12, 30, 0, 0);
-    box(score_win, 0, 0);
-    box(playerinfo_win, 0, 0);
-    box(map_win, 0, 0);
-    wrefresh(map_win);
-    wrefresh(score_win);
-    wrefresh(playerinfo_win);
 }
+
+void* handle_update_roomdata(uint8_t* buffer){
+    //处理更新房间数据
+    RoomData* roomdata = (RoomData*)malloc(sizeof(RoomData));
+    uint8_t* temp = buffer;
+    temp+=sizeof(uint8_t);
+    memcpy(roomdata, temp, sizeof(RoomData));
+    temp+=sizeof(RoomData);
+    if(roomdata->id != local_room_id){
+        return NULL;
+    }
+
+    //更新地图
+    int map_win_height, map_win_width;
+    getmaxyx(stdscr, map_win_height, map_win_width);  // 获取窗口的大小
+    wclear(map_win);
+    box(map_win, 0, 0);
+    Player* myself;
+    for(int i=0;i<roomdata->player_num;i++){
+        if(strcmp(roomdata->players[i].name, local_player_name) == 0){
+            myself = &roomdata->players[i];
+        }
+    }
+ 
+    //刷新所有小怪的位置
+    for(int i=0;i<20;i++){
+        if(roomdata->monsters[i].status == 1){
+            //显示小怪，小怪为红色的随机字符，头顶有当前生命值
+            wattron(map_win, COLOR_PAIR(1));
+            char c = random_char();
+            mvwprintw(map_win, roomdata->monsters[i].y, roomdata->monsters[i].x, "%c",c);
+            char* Hp = (char*)malloc(sizeof(char)*4);
+            sprintf(Hp, "%u", roomdata->monsters[i].Hp);
+            mvwprintw(map_win, roomdata->monsters[i].y-1, roomdata->monsters[i].x, "%s",Hp);
+            free(Hp);
+            wattroff(map_win, COLOR_PAIR(1));
+            //为小怪添加颜色
+            
+        }
+    }
+    
+    //更新所有玩家的位置
+    for(int i=0;i<roomdata->player_num;i++){
+        if(roomdata->players[i].status == 1){
+            //显示玩家，玩家为绿色的#字符，头顶有当前名称+生命值，玩家形状为以自身坐标为中心的十字形，十字的边长为攻击范围
+            wattron(map_win, COLOR_PAIR(2));
+            mvwprintw(map_win, roomdata->players[i].y + 1, roomdata->players[i].x, "%c","#");
+            mvwprintw(map_win, roomdata->players[i].y, roomdata->players[i].x-1, "%s","###");
+            mvwprintw(map_win, roomdata->players[i].y - 1, roomdata->players[i].x, "%c","#");
+            char* Hp = (char*)malloc(sizeof(char)*15);
+            sprintf(Hp, "%s: HP:%u", roomdata->players[i].name,roomdata->players[i].Hp);
+            wattroff(map_win, COLOR_PAIR(2));
+            mvwprintw(map_win, roomdata->players[i].y-roomdata->players[i].Atk_range, roomdata->players[i].x - 5, "%s", Hp);
+            free(Hp);
+        }
+    }
+
+    //更新玩家信息
+    wclear(playerinfo_win);
+    box(playerinfo_win, 0, 0);
+    mvwprintw(playerinfo_win, 1, 1, "玩家信息");
+    mvwprintw(playerinfo_win, 2, 1, "等级：%u", myself->level);
+    mvwprintw(playerinfo_win, 2, 1, "昵称：%s", myself->name);
+    mvwprintw(playerinfo_win, 3, 1, "生命值：%u", myself->Hp);
+    mvwprintw(playerinfo_win, 4, 1, "攻击力：%u", myself->Atk);
+    mvwprintw(playerinfo_win, 5, 1, "攻击范围：%u", myself->Atk_range);
+    mvwprintw(playerinfo_win, 6, 1, "经验值：%u/%u", myself->exp, myself->next_level_exp);
+    
+    //更新分数，分数用经验值代替，从高到低排序
+    wclear(score_win);
+    box(score_win, 0, 0);
+    mvwprintw(score_win, 1, 1, "排行榜");
+    //排序
+    Player* players = (Player*)malloc(sizeof(Player)*roomdata->player_num);
+    memcpy(players, roomdata->players, sizeof(Player)*roomdata->player_num);
+    for(int i=0;i<roomdata->player_num;i++){
+        for(int j=i+1;j<roomdata->player_num;j++){
+            if(players[i].exp < players[j].exp){
+                Player temp = players[i];
+                players[i] = players[j];
+                players[j] = temp;
+            }
+        }
+    }
+    //显示
+    for(int i=0;i<roomdata->player_num;i++){
+        mvwprintw(score_win, i+2, 1, "%d-%s: %d",i, players[i].name, players[i].exp);
+    }
+    free(players);
+
+    
+    //刷新
+    //以当前玩家为中心显示地图
+    int start_x = myself->x - map_win_width/2;
+    if (start_x < 0)
+    {
+        start_x = 0;
+    }
+    int start_y = myself->y - map_win_height/2;
+    if (start_y < 0)
+    {
+        start_y = 0;
+    }
+    
+    pnoutrefresh(map_win, 0, 0, 0, 0, map_win_height-1, map_win_width-1);
+    wnoutrefresh(score_win);
+    wnoutrefresh(playerinfo_win);
+
+    doupdate();
+}
+
+
 
 void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){
     if(gameing){
@@ -179,21 +285,20 @@ void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){
 
 void handle_response(){
     // 处理响应
-    char buffer[1024];
+    char buffer[UINT16_MAX];
     int len = read(sockfd, buffer, sizeof(buffer) - 1);
     if (len > 0) {
         uint8_t opt = (uint8_t)buffer[0];
         switch (opt)
         {
             case UPDATE_ROOM_LIST:
-            // printf("UPDATE_ROOM_LIST\n");
             handle_update_roomlist(buffer, roomlist_win);
             break;
             case UPDATE_MSG:
             printf("UPDATE_MSG\n");
             break;
             case UPDATE_DATA:
-            printf("UPDATE_DATA\n");
+            handle_update_roomdata(buffer);
             break;
             case JOIN_ROOM_SUCCESS:
             handle_join_success();
