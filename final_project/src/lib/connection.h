@@ -111,15 +111,25 @@ int send_request(Data data){
 }
 
 void handle_join_success(){
+    gameing = 1;
     //加入房间成功
-    map_win = newwin(MAP_HEIGHT, MAP_WIDTH, 0, 0);
+    map_win = newwin(0, 0, 0, 0);
     int map_win_height, map_win_width;
     getmaxyx(map_win, map_win_height, map_win_width);  // 获取窗口的大小
-    score_win = newwin(14, 10, 0, MAP_WIDTH-10);
-    playerinfo_win = newwin(14, 15, 0, 0);
+    score_win = newwin(14, 20, 0, map_win_width-20);
+    playerinfo_win = newwin(12, 30, 0, 0);
+    box(score_win, 0, 0);
+    box(playerinfo_win, 0, 0);
+    box(map_win, 0, 0);
+    wrefresh(map_win);
+    wrefresh(score_win);
+    wrefresh(playerinfo_win);
 }
 
 void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){
+    if(gameing){
+        return;
+    }
     uint8_t* temp = buffer;
     temp+=sizeof(uint8_t);
     uint8_t room_num;
@@ -184,6 +194,9 @@ void handle_response(){
             break;
             case UPDATE_DATA:
             printf("UPDATE_DATA\n");
+            break;
+            case JOIN_ROOM_SUCCESS:
+            handle_join_success();
             break;
         }
     } else if (len == 0) {

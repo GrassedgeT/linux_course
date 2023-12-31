@@ -9,8 +9,8 @@
 #define MAX_LEVEL 20
 #define MAX_PLAYER_NUM 10
 #define MAX_MONSTER_NUM 20
-#define MAP_HEIGHT 100
-#define MAP_WIDTH 100
+#define MAP_HEIGHT 1000
+#define MAP_WIDTH 1000
 //小怪
 typedef struct Monster{
     uint16_t id;    
@@ -19,7 +19,7 @@ typedef struct Monster{
     int x; //横坐标
     int y; //纵坐标
     u_int8_t status; //状态0:死亡 1：正常
-    struct Monster* next;
+
 }Monster;
 typedef struct Player{
     uint16_t id;
@@ -42,10 +42,18 @@ typedef struct RoomNode
     uint16_t id;
     char name[11];
     uint8_t player_num;
+    Player players[MAX_PLAYER_NUM];
+    Monster monsters[MAX_MONSTER_NUM];
+}RoomNode;
+
+typedef struct RoomData{
+    uint16_t id;
+    char name[11];
+    uint8_t player_num;
+    uint8_t max_player_num;
     struct Player* players;
     struct Monster* monsters;
-    struct RoomNode* next;
-}RoomNode;
+}RoomData;
 
 typedef struct RoomInfo{
     uint16_t id;
@@ -55,17 +63,7 @@ typedef struct RoomInfo{
     struct RoomInfo* next;
 }RoomInfo;
 
-Monster* init_monsterlist(){
-    Monster* head = (Monster*)malloc(sizeof(Monster));
-    head->id = 0;
-    head->Hp = 0;
-    head->Atk = 0;
-    head->x = 0;
-    head->y = 0;
-    head->status = 0;
-    head->next = NULL;
-    return head;
-}
+
 
 Player* init_playerlist(){
     Player* head = (Player*)malloc(sizeof(Player));
@@ -95,6 +93,8 @@ RoomNode* init_roomlist(){
     head->players = NULL;
     head->monsters = NULL;
     head->next = NULL;
+    player_mutex = PTHREAD_MUTEX_INITIALIZER;
+    monster_mutex = PTHREAD_MUTEX_INITIALIZER;
     return head;
 }
 
@@ -110,6 +110,8 @@ RoomInfo* get_roominfo(RoomNode* roomlist, int room_num, int max_player_num){
     }
     
     RoomNode* p = roomlist;
+    pthread_mutex_lock(&p->player_mutex);
+    pthread_mutex_lock(&p->monster_mutex);
     while(p->next != NULL){
         roominfo[i].id = p->next->id;
         strcpy(roominfo[i].name, p->next->name);
@@ -118,7 +120,95 @@ RoomInfo* get_roominfo(RoomNode* roomlist, int room_num, int max_player_num){
         i++;
         p = p->next;
     }
+    pthread_mutex_unlock(&p->player_mutex);
+    pthread_mutex_unlock(&p->monster_mutex);
     return roominfo;
+}
+
+//小怪死亡后重生
+void* reborn_monster(Monster* monster){
+    monster->Hp = random_int(50, MAX_HP);
+    monster->Atk = random_int(10, MAX_ATK);
+    monster->x = random_int(0, MAP_WIDTH);
+    monster->y = random_int(0, MAP_HEIGHT);
+    monster->status = 1;
+}
+
+void* control_monsters(RoomNode* roomNode){
+    while(1){
+        sleep(1);
+        pthread_mutex_lock(&roomNode->player_mutex);
+        if(roomNode->player_num == 0){
+            pthread_mutex_unlock(&roomNode->player_mutex);
+            continue;
+        }
+        Player* p = roomNode->players;
+        pthread_mutex_lock(&roomNode->monster_mutex);
+        for(int i=0;i<20;i++){
+            if(roomNode->monsters[i].status == 0){
+                reborn_monster(&roomNode->monsters[i]);
+                continue;
+            }
+            double min_distance = INFINITY;
+            Player* nearest_player = NULL;
+            Player* p = roomNode->players;
+            while(p->next != NULL){
+                if(p->next->status == 0){
+                    p = p->next;
+                    continue;
+                }
+                double distance = sqrt(pow(p->next->x - roomNode->monsters[i].x, 2) + pow(p->next->y - roomNode->monsters[i].y, 2));
+                if(distance < min_distance){
+                    min_distance = distance;
+                    nearest_player = p->next;
+                }
+                p = p->next;
+            }
+            if(nearest_player != NULL){
+                // 让怪物向最近的玩家移动。
+                if(nearest_player->x > roomNode->monsters[i].x){
+                    roomNode->monsters[i].x++;
+                }else if(nearest_player->x < roomNode->monsters[i].x){
+                    roomNode->monsters[i].x--;
+                }
+                if(nearest_player->y > roomNode->monsters[i].y){
+                    roomNode->monsters[i].y++;
+                }else if(nearest_player->y < roomNode->monsters[i].y){
+                    roomNode->monsters[i].y--;
+                }
+                // 如果怪物与玩家的坐标重合，怪物攻击玩家且怪物死亡
+                if(nearest_player->x == roomNode->monsters[i].x && nearest_player->y == roomNode->monsters[i].y){
+                    if(nearest_player->Hp > roomNode->monsters[i].Atk){
+                        nearest_player->Hp -= roomNode->monsters[i].Atk;
+                    }else{
+                        nearest_player->Hp = 0;
+                        nearest_player->status = 0;
+                    }
+                    roomNode->monsters[i].status = 0;
+                }   
+            }
+        }
+        send_boardcast(update_roomdata(get_roomdata(roomNode)));
+        pthread_mutex_unlock(&roomNode->monster_mutex);
+        pthread_mutex_unlock(&roomNode->player_mutex);
+    }
+    
+}
+
+RoomData* get_roomdata(RoomNode* roomNode){
+    RoomData* roomdata = (RoomData*)malloc(sizeof(RoomData));
+    roomdata->id = roomNode->id;
+    strcpy(roomdata->name, roomNode->name);
+    roomdata->player_num = roomNode->player_num;
+    roomdata->monsters = memcpy(roomdata->monsters, roomNode->monsters, sizeof(Monster)*MAX_MONSTER_NUM);
+    int i = 0;
+    Player* p = roomNode->players;
+    while(p->next != NULL){
+        roomdata->players[i] = *p->next;
+        p = p->next;
+        i++;
+    }
+    return roomdata;
 }
 
 //添加新房间
@@ -132,7 +222,17 @@ void add_room(RoomNode* head, char* name){
     strcpy(new_room->name, name);
     new_room->player_num = 0;
     new_room->players = init_playerlist();
-    new_room->monsters = init_monsterlist();
+    new_room->monsters = (Monster*)malloc(sizeof(Monster)*20);
+    for(int i=0;i<20;i++){
+        new_room->monsters[i].id = random_int(1000, 9999);
+        new_room->monsters[i].Hp = random_int(50, MAX_HP);
+        new_room->monsters[i].Atk = random_int(10, MAX_ATK);
+        new_room->monsters[i].x = random_int(0, MAP_WIDTH);
+        new_room->monsters[i].y = random_int(0, MAP_HEIGHT);
+        new_room->monsters[i].status = 1;
+    }
+    pthread_t tid;
+    pthread_create(&tid, NULL, control_monsters, (void*)new_room);
     new_room->next = NULL;
     p->next = new_room;
 }
@@ -167,7 +267,9 @@ int add_player(RoomNode* room, char* name){
     if(room == NULL){
         return 0;
     }
+    pthread_mutex_lock(&room->player_mutex);
     if(room->player_num == MAX_PLAYER_NUM){
+        pthread_mutex_unlock(&room->player_mutex);
         return 0;
     }
     Player* p = (Player*)malloc(sizeof(Player));
@@ -183,25 +285,29 @@ int add_player(RoomNode* room, char* name){
     p->score = 0;
     p->exp = 0;
     p->next_level_exp = 50;
-    p->x = 0;
-    p->y = 0;
-    p->status = 0;
+    p->x = random_int(0, MAP_WIDTH);
+    p->y = random_int(0, MAP_HEIGHT);
+    p->status = 1;
     room->player_num++;
     head->next = p;
+    pthread_mutex_unlock(&room->player_mutex);
     return 1;
 }
 
 void del_player(RoomNode* room, uint16_t id){
     Player* p = room->players;
+    pthread_mutex_lock(&room->player_mutex);
     while(p->next != NULL){
         if(p->next->id == id){
             Player* q = p->next;
             p->next = p->next->next;
             free(q);
+            pthread_mutex_unlock(&room->player_mutex);
             return;
         }
         p = p->next;
     }
+    pthread_mutex_unlock(&room->player_mutex);
 }
 
 Player* search_player(RoomNode* room, uint16_t id){

@@ -39,6 +39,8 @@
 
 #define SERVER_RSP_MASK 0x0f //服务器响应掩码: 0000 1111
 
+Queue* all_client_fd; // 所有客户端的fd
+
 typedef struct{
     int len; //数据长度
     uint8_t* data; //数据
@@ -82,6 +84,16 @@ Data join_room(uint16_t room_id, char* player_name){
     return data;
 }
 
+int send_boardcast(Data data){
+    int client_fd;
+    Node* p = all_client_fd->front;
+    while(p != NULL){
+        client_fd = p->data;
+        write(client_fd, data.data, data.len);
+        p = p->next;
+    }
+}
+
 Data update_roomlist(RoomInfo* roominfo, uint8_t room_num){
     uint8_t opt = UPDATE_ROOM_LIST;
     uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)*2+sizeof(RoomInfo)*room_num);
@@ -102,6 +114,18 @@ Data update_roomlist(RoomInfo* roominfo, uint8_t room_num){
         temp+=sizeof(RoomInfo)*room_num;       
     }
     Data data = {len, buf};
+    return data;
+}
+
+Data update_roomdata(RoomData* roomdata){
+    uint8_t opt = UPDATE_DATA;
+    uint8_t* buf = (uint8_t*)malloc(sizeof(uint8_t)+sizeof(RoomData));
+    uint8_t* temp = buf;
+    memcpy(temp, &opt, sizeof(uint8_t));
+    temp+=sizeof(uint8_t);
+    memcpy(temp, roomdata, sizeof(RoomData));
+    temp+=sizeof(RoomData);
+    Data data = {sizeof(uint8_t)+sizeof(RoomData), buf};
     return data;
 }
 

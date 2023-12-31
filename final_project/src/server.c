@@ -23,7 +23,7 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER; // 用于通知有新的任务�
 RoomNode* room_list; // 房间列表
 int room_num = 0; // 房间数量
 struct epoll_event events[MAX_EVENTS];
-Queue* all_client_fd; // 所有客户端的fd
+
 int client_num = 0; 
 
 void *thread_func(void *arg) {
@@ -93,15 +93,7 @@ void set_non_blocking(int sockfd) {
     }
 }
 
-int send_boardcast(Data data){
-    int client_fd;
-    Node* p = all_client_fd->front;
-    while(p != NULL){
-        client_fd = p->data;
-        write(client_fd, data.data, data.len);
-        p = p->next;
-    }
-}
+
 
 void handle_client_request(int client_fd) {
     uint8_t buffer[BUFFER_SIZE];
@@ -143,7 +135,8 @@ void handle_client_request(int client_fd) {
                 Data data = send_join_success();
                 write(client_fd, data.data, data.len);
                 send_boardcast(update_roomlist(get_roominfo(room_list, room_num, MAX_PLAYER_NUM), room_num));
-                //TODO 广播更新房间数据
+                send_boardcast(update_roomdata(get_roomdata(search_room(room_list, room_id))));
+                //广播更新房间数据
             }else{
                 //加入失败
                 Data data = send_join_fail();

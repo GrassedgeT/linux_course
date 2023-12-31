@@ -113,7 +113,6 @@ int main(int argc,char* argv[]){
                 strcpy(local_player_name, player_name); 
                 send_request(join_room(id, player_name));
             }
-
         }
     }
     
