@@ -153,14 +153,14 @@ void* handle_update_roomdata(uint8_t* buffer){
         WINDOW* popwin = newwin(5, 30, (LINES-5)/2, (COLS-30)/2);
         mvwprintw(popwin, 1, 1, "你已死亡，点击空格复活，点击esc退出");
         wrefresh(popwin);
-        char ch = wgetch(map_win);
+        char ch = wgetch(stdscr);
         if (ch == 27)
         {
             //退出
             send_request(quit(local_room_id, local_player_name));
             delwin(popwin);
             exit(0);
-        }else if(ch == ' '){
+        }else if(ch == '\n'){
             //复活
             send_request(reborn(local_room_id, local_player_name));
             wclear(popwin);
@@ -308,39 +308,89 @@ void handle_update_roomlist(uint8_t* buffer, WINDOW* roomlist_win){
     
 }
 
-show_attack(uint8_t buffer){
+show_attack(uint8_t* buffer){
     int x, y;
     uint8_t direction, attack_range;
     memcpy(&x, buffer+sizeof(uint8_t), sizeof(int));
     memcpy(&y, buffer+sizeof(uint8_t)+sizeof(int), sizeof(int));
     memcpy(&direction, buffer+sizeof(uint8_t)+sizeof(int)+sizeof(int), sizeof(uint8_t));
     memcpy(&attack_range, buffer+sizeof(uint8_t)+sizeof(int)+sizeof(int)+sizeof(uint8_t), sizeof(uint8_t));
-    wattron(map_win, COLOR_PAIR(1));char ch[attack_range];
-    for(int i=0;i<attack_range;i++){
-        ch[i] = '·';
+    wattron(map_win, COLOR_PAIR(2));char ch[attack_range+1+1];
+    for(int i=0;i<=attack_range;i++){
+        ch[i] = 'x';
     }
+    ch[attack_range+1] = '\0';
+
     switch (direction)
     {
         case FIREST:
-            for(int i = 0;i<attack_range;i++)
-                mvwprintw(map_win, y+i+1, x+1, "%s", ch);
+            for(int i = 0;i<=attack_range;i++)
+                mvwprintw(map_win, y-i, x, "%s", ch);
+            break;
         case SECOND:
             for(int i = 0;i<attack_range;i++)
-                mvwprintw(map_win, y+i-1, x-attack_range, "%s", ch);       
+                mvwprintw(map_win, y-i, x-attack_range, "%s", ch);       
+            break;
         case THIRD:
             for(int i = 0;i<attack_range;i++)
-                mvwprintw(map_win, y-i-1, x-attack_range, "%s", ch);
+                mvwprintw(map_win, y+i, x-attack_range, "%s", ch);
+            break;
         case FOURTH:
             for(int i = 0;i<attack_range;i++)
-                mvwprintw(map_win, y-i+1, x+1, "%s", ch);
+                mvwprintw(map_win, y+i, x, "%s", ch);
+            break;
     }
     wattroff(map_win, COLOR_PAIR(1));
     int map_win_height, map_win_width;
     getmaxyx(stdscr, map_win_height, map_win_width);  // 获取窗口的大小
     int start_x = x - map_win_width/2;
     int start_y = y - map_win_height/2;
-    
+
+    FILE *score_file = fopen("score_win.dat", "w");
+    if (score_file == NULL) {
+        perror("Cannot open score_win.dat");
+        return;
+    }
+    if (putwin(score_win, score_file) == ERR) {
+        perror("Cannot write score_win to file");
+        return;
+    }
+    fclose(score_file);
+
+    FILE *playerinfo_file = fopen("playerinfo_win.dat", "w");
+    if (playerinfo_file == NULL) {
+        perror("Cannot open playerinfo_win.dat");
+        return;
+    }
+    if (putwin(playerinfo_win, playerinfo_file) == ERR) {
+        perror("Cannot write playerinfo_win to file");
+        return;
+    }
+    fclose(playerinfo_file);
     pnoutrefresh(map_win, start_y, start_x, 0, 0, map_win_height-1, map_win_width-1);
+    score_file = fopen("score_win.dat", "r");
+    if (score_file == NULL) {
+        perror("Cannot open score_win.dat");
+        return;
+    }
+    score_win = getwin(score_file);
+    if (score_win == NULL) {
+        perror("Cannot read score_win from file");
+        return;
+    }
+    fclose(score_file);
+
+    playerinfo_file = fopen("playerinfo_win.dat", "r");
+    if (playerinfo_file == NULL) {
+        perror("Cannot open playerinfo_win.dat");
+        return;
+    }
+    playerinfo_win = getwin(playerinfo_file);
+    if (playerinfo_win == NULL) {
+        perror("Cannot read playerinfo_win from file");
+        return;
+    }
+    fclose(playerinfo_file);
     wnoutrefresh(score_win);
     wnoutrefresh(playerinfo_win);
 

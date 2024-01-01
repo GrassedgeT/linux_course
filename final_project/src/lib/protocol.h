@@ -269,7 +269,7 @@ Data send_attack(temp_result result, uint8_t* room_list)
         p = p->next;
     }
     uint8_t opt = result.opt;
-    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t)*2 + sizeof(int) * 2);
+    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t)*3 + sizeof(int) * 2);
     uint8_t *temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp += sizeof(uint8_t);
@@ -280,9 +280,9 @@ Data send_attack(temp_result result, uint8_t* room_list)
     uint8_t direction = result.opt & (!CLIENT_OPT_MASK);
     memcpy(temp, &direction, sizeof(uint8_t));
     temp += sizeof(uint8_t);
-    memcpy(temp, myself->Atk_range, sizeof(uint8_t));
+    memcpy(temp, &(myself->Atk_range), sizeof(uint8_t));
     pthread_mutex_unlock(&roomNode->player_mutex);
-    Data data = {sizeof(uint8_t) + sizeof(int) * 2, buf};
+    Data data = {sizeof(uint8_t)*3 + sizeof(int) * 2, buf};
     return data;
 }
 
@@ -411,7 +411,7 @@ Data send_move(int direction, uint16_t room_id, char *player_name)
 Data attack(int direction, uint16_t room_id, char *player_name)
 {
     uint8_t opt = ATTACK | direction;
-    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t));
+    uint8_t *buf = (uint8_t *)malloc(sizeof(uint8_t)+sizeof(uint16_t)+11*sizeof(char));
     uint8_t *temp = buf;
     memcpy(temp, &opt, sizeof(uint8_t));
     temp += sizeof(uint8_t);
@@ -421,7 +421,7 @@ Data attack(int direction, uint16_t room_id, char *player_name)
     strcpy(name, player_name);
     memcpy(temp, name, sizeof(char) * 11);
     temp += 11 * sizeof(char);
-    Data data = {sizeof(uint8_t), buf};
+    Data data = {sizeof(uint8_t)+sizeof(uint16_t)+11*sizeof(char), buf};
     return data;
 }
 
@@ -486,7 +486,7 @@ int quit_room(uint8_t *data, RoomNode* room_list)
     memcpy(player_name, data + sizeof(uint16_t), sizeof(char) * 11);
     RoomNode *roomNode = search_room(room_list, room_id);
     pthread_mutex_lock(&roomNode->player_mutex);
-    Player *p = roomNode->players;
+    Player* p = roomNode->players;
     while (p->next != NULL)
     {
         if (strcmp(p->next->name, player_name) == 0)
@@ -517,10 +517,9 @@ int reborn_player(uint8_t *data, RoomNode* room_list)
         if (strcmp(p->next->name, player_name) == 0)
         {
             p->next->status = 1;
-            p->next->Hp = 100;
             p->next->x = random_int(0, MAP_WIDTH);
             p->next->y = random_int(0, MAP_HEIGHT);
-            p->next->Hp = p->next->level * 10;
+            p->next->Hp = p->next->level * 10 + 100;
             break;
         }
         p = p->next;

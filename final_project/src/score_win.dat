@@ -1,0 +1,25 @@
+ˆˆˆˆncurses 6.4.20230520
+_maxy=13
+_maxx=19
+_begx=226
+_flags=2
+flag=_clear
+flag=_idcok
+_delay=-1
+_regbottom=13
+_bkgrnd=\s
+rows:
+1:\{ALTCHARSET}lqqqqqqqqqqqqqqqqqqk
+2:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+3:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+4:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+5:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+6:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+7:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+8:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+9:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+10:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+11:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+12:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+13:x\{NORMAL}\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\s\{ALTCHARSET}x
+14:mqqqqqqqqqqqqqqqqqqj
