@@ -160,7 +160,7 @@ void handle_client_request(int client_fd) {
             break;
         case ATTACK:
             send_boardcast(send_attack(result, room_list));
-            player_attack(result.data, result.opt & (!CLIENT_OPT_MASK),room_list);
+            player_attack(result.data, result.opt & ATTACK_MASK,room_list);
             break;
         case QUIT:
             quit_room(result.data, room_list);

@@ -10,8 +10,8 @@
 #include <sys/epoll.h>
 #include <pthread.h>
 
-#define SERVER_IP "127.0.0.1" // 服务端IP地址
-#define SERVER_PORT 8080      // 服务端监听端口
+#define SERVER_IP "198.18.0.172" // 服务端IP地址
+#define SERVER_PORT 39072      // 服务端监听端口
 #define MAX_EVENTS 10
 
 WINDOW* roomlist_win;
@@ -209,15 +209,15 @@ void* handle_update_roomdata(uint8_t* buffer){
     wclear(playerinfo_win);
     box(playerinfo_win, 0, 0);
     mvwprintw(playerinfo_win, 1, 1, "玩家信息");
-    mvwprintw(playerinfo_win, 2, 1, "等级：%u", myself->level);
-    mvwprintw(playerinfo_win, 2, 1, "昵称：%s", myself->name);
-    mvwprintw(playerinfo_win, 3, 1, "生命值：%u", myself->Hp);
-    mvwprintw(playerinfo_win, 4, 1, "攻击力：%u", myself->Atk);
-    mvwprintw(playerinfo_win, 5, 1, "攻击范围：%u", myself->Atk_range);
-    mvwprintw(playerinfo_win, 6, 1, "经验值：%u/%u", myself->exp, myself->next_level_exp);
-    mvwprintw(playerinfo_win, 7, 1, "位置：(%u,%u)", myself->x, myself->y);
+    mvwprintw(playerinfo_win, 2, 1, "等级：%d", myself->level);
+    mvwprintw(playerinfo_win, 3, 1, "昵称：%s", myself->name);
+    mvwprintw(playerinfo_win, 4, 1, "生命值：%u", myself->Hp);
+    mvwprintw(playerinfo_win, 5, 1, "攻击力：%u", myself->Atk);
+    mvwprintw(playerinfo_win, 6, 1, "攻击范围：%u", myself->Atk_range);
+    mvwprintw(playerinfo_win, 7, 1, "经验值：%d/%d", myself->exp, myself->next_level_exp);
+    mvwprintw(playerinfo_win, 8, 1, "位置：(%u,%u)", myself->x, myself->y);
     
-    //更新分数，分数用经验值代替，从高到低排序
+    //更新分数，分数用经验值代替，从高到低排序 
     wclear(score_win);
     box(score_win, 0, 0);
     mvwprintw(score_win, 1, 1, "排行榜");
@@ -328,15 +328,15 @@ show_attack(uint8_t* buffer){
                 mvwprintw(map_win, y-i, x, "%s", ch);
             break;
         case SECOND:
-            for(int i = 0;i<attack_range;i++)
+            for(int i = 0;i<=attack_range;i++)
                 mvwprintw(map_win, y-i, x-attack_range, "%s", ch);       
             break;
         case THIRD:
-            for(int i = 0;i<attack_range;i++)
+            for(int i = 0;i<=attack_range;i++)
                 mvwprintw(map_win, y+i, x-attack_range, "%s", ch);
             break;
         case FOURTH:
-            for(int i = 0;i<attack_range;i++)
+            for(int i = 0;i<=attack_range;i++)
                 mvwprintw(map_win, y+i, x, "%s", ch);
             break;
     }

@@ -29,10 +29,10 @@ typedef struct Player{
     uint8_t Hp; //生命值 初始值100
     uint8_t Atk; //攻击力 初始值10
     uint8_t Atk_range; //攻击范围 初始值2
-    uint8_t level; //等级 初始值1
-    uint8_t score; //分数 初始值0
-    uint8_t exp; //经验值 初始值0
-    uint8_t next_level_exp; //升级所需经验值 初始值10 逐级递增10击杀小怪得1击杀玩家得2
+    int level; //等级 初始值1
+    int score; //分数 初始值0
+    int exp; //经验值 初始值0
+    int next_level_exp; //升级所需经验值 初始值10 逐级递增10击杀小怪得1击杀玩家得2
     int x; //横坐标
     int y; //纵坐标
     uint8_t status; //状态0: 死亡 1：正常 2：无敌
@@ -181,7 +181,7 @@ RoomNode* add_room(RoomNode* head, char* name){
     new_room->players = init_playerlist();
     for(int i=0;i<MAX_MONSTER_NUM;i++){
         new_room->monsters[i].id = random_int(1000, 9999);
-        new_room->monsters[i].Hp = random_int(50, MAX_HP);
+        new_room->monsters[i].Hp = random_int(10, 100);
         new_room->monsters[i].Atk = random_int(10, MAX_ATK);
         new_room->monsters[i].x = random_int(0, MAP_WIDTH);
         new_room->monsters[i].y = random_int(0, MAP_HEIGHT);

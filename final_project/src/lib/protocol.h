@@ -28,6 +28,7 @@
 #define SECOND 16 // 第二象限方向 0001 0000
 #define THIRD 32  // 第三象限方向 0010 0000
 #define FOURTH 48 // 第四象限方向 0011 0000
+#define ATTACK_MASK 0xf0 // 攻击掩码 1111 0000
 
 #define CARRY_ROOM 64    // 携带目标房间号 0100 0000
 #define CARRY_PLAYER 128 // 携带目标玩家 1000 0000
@@ -192,11 +193,14 @@ int player_attack(uint8_t *data, int direction, RoomNode *room_list)
                 p->next->Hp = 0;
                 p->next->status = 1;
                 myself->exp += 2;
+                myself->Hp += 20;
                 if (myself->exp >= myself->next_level_exp)
                 {
                     if (myself->level >= 10)
                     {
-                        myself->exp = myself->next_level_exp;
+                        myself->exp += 5;
+                        myself->level++;
+                        myself->Hp = MAX_HP;
                         continue;
                     }
                     myself->level++;
@@ -227,11 +231,14 @@ int player_attack(uint8_t *data, int direction, RoomNode *room_list)
                 roomNode->monsters[i].Hp = 0;
                 roomNode->monsters[i].status = 1;
                 myself->exp += 2;
+                myself->Hp += 10;
                 if (myself->exp >= myself->next_level_exp)
                 {
                     if (myself->level >= 10)
                     {
-                        myself->exp = myself->next_level_exp;
+                        myself->exp += 5;
+                        myself->level++;
+                        myself->Hp = MAX_HP;
                         continue;
                     }
                     myself->level++;
@@ -277,7 +284,7 @@ Data send_attack(temp_result result, uint8_t* room_list)
     temp += sizeof(int);
     memcpy(temp, &myself->y, sizeof(int));
     temp += sizeof(int);
-    uint8_t direction = result.opt & (!CLIENT_OPT_MASK);
+    uint8_t direction = result.opt & ATTACK_MASK;
     memcpy(temp, &direction, sizeof(uint8_t));
     temp += sizeof(uint8_t);
     memcpy(temp, &(myself->Atk_range), sizeof(uint8_t));
@@ -485,8 +492,17 @@ int quit_room(uint8_t *data, RoomNode* room_list)
     memcpy(&room_id, data, sizeof(uint16_t));
     memcpy(player_name, data + sizeof(uint16_t), sizeof(char) * 11);
     RoomNode *roomNode = search_room(room_list, room_id);
+    if(roomNode == NULL){
+        return 0;
+    }
     pthread_mutex_lock(&roomNode->player_mutex);
     Player* p = roomNode->players;
+    if (p == NULL)
+    {
+        pthread_mutex_unlock(&roomNode->player_mutex);
+        return 0;
+    }
+    
     while (p->next != NULL)
     {
         if (strcmp(p->next->name, player_name) == 0)
